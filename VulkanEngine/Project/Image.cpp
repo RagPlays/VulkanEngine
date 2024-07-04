@@ -163,7 +163,8 @@ void Image::CopyBufferToImage(const DataBuffer& buffer, const CommandPool& comma
         region.imageSubresource.layerCount = 1;
 
         region.imageOffset = { 0, 0, 0 };
-        region.imageExtent = {
+        region.imageExtent =
+        {
             m_Width,
             m_Heigth,
             1

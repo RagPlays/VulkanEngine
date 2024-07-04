@@ -10,8 +10,12 @@
 const int MAX_FRAMES_IN_FLIGHT{ 2 };
 
 // 720p resolution (AR 16:9)
-const uint32_t g_WindowWidth{ 1280 };
-const uint32_t g_WindowHeight{ 720 };
+constexpr uint32_t g_WindowWidth{ 1280 };
+constexpr uint32_t g_WindowHeight{ 720 };
+constexpr float g_AspectRatio{ g_WindowWidth / static_cast<float>(g_WindowHeight) };
+
+const std::string g_ModelPath{ "Resources/Models/viking_room.obj" };
+const std::string g_TexturePath{ "Resources/Models/viking_room.png" };
 
 const std::vector<const char*> g_ValidationLayers{ "VK_LAYER_KHRONOS_validation" };
 const std::vector<const char*> g_DeviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };

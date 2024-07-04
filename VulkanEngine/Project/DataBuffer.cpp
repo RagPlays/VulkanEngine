@@ -85,16 +85,16 @@ void DataBuffer::Map(VkDevice device, VkDeviceSize size, void** data)
     vkMapMemory(device, m_VkBufferMemory, 0, size, 0, data);
 }
 
-void DataBuffer::BindAsVertexBuffer(VkCommandBuffer commandBuffer)
+void DataBuffer::BindAsVertexBuffer(VkCommandBuffer commandBuffer) const
 {
     VkBuffer vertexBuffers[]{ m_VkBuffer };
     VkDeviceSize offsets[]{ 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 }
 
-void DataBuffer::BindAsIndexBuffer(VkCommandBuffer commandBuffer)
+void DataBuffer::BindAsIndexBuffer(VkCommandBuffer commandBuffer) const
 {
-    vkCmdBindIndexBuffer(commandBuffer, m_VkBuffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(commandBuffer, m_VkBuffer, 0, VK_INDEX_TYPE_UINT32);
 }
 
 void DataBuffer::CopyBuffer(VkQueue graphicsQueue, VkDevice device, const CommandPool& commandPool, DataBuffer srcBuffer, DataBuffer dstBuffer, VkDeviceSize size)

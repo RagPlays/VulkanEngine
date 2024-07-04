@@ -31,6 +31,11 @@
 #include "Image.h"
 #include "ImageView.h"
 #include "Sampler.h"
+#include "Model.h"
+#include "Shader.h"
+
+
+#include "Camera.h"
 
 class VulkanBase final
 {
@@ -92,6 +97,7 @@ private:
 
 	// Graphics Pipeline
 	void CreateDescriptorSetLayout();
+	void CreateGraphicsPipelineLayout();
 	void CreateGraphicsPipeline();
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 
@@ -105,8 +111,7 @@ private:
 	void CleanupSyncObjects();
 
 	// Creating buffers
-	void CreateVertexBuffer();
-	void CreateIndexBuffer();
+	void CreateModel();
 	void CreateUniformBuffers();
 	void CleanupUniformBuffers();
 	void UpdateUniformBuffer(uint32_t currentImage);
@@ -181,11 +186,11 @@ private:
 	uint32_t m_CurrentFrame{ 0 };
 
 	// Buffers
-	DataBuffer m_VertexBuffer;
-	DataBuffer m_IndexBuffer;
-
 	std::vector<DataBuffer> m_UniformBuffers;
 	std::vector<void*> m_UniformBuffersMapped;
+
+	/*DataBuffer m_VertexBuffer;
+	DataBuffer m_IndexBuffer;
 
 	const std::vector<Vertex> m_Vertices
 	{
@@ -200,11 +205,13 @@ private:
 		{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 	};
 
-	const std::vector<uint16_t> m_Indices
+	const std::vector<uint32_t> m_Indices
 	{
 		0, 1, 2, 2, 3, 0,
 		4, 5, 6, 6, 7, 4
-	};
+	};*/
+
+	Model m_Model;
 
 	// DescriptorPool
 	VkDescriptorPool m_DescriptorPool;
@@ -218,6 +225,9 @@ private:
 	// Depth Buffer
 	Image m_DepthImage;
 	ImageView m_DepthImageView;
+
+	// Camera
+	Camera m_Camera;
 };
 
 #endif // !VULKANBASE_H

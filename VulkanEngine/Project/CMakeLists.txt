@@ -25,6 +25,7 @@ add_custom_target(
 
 set(SOURCES
     "Libraries/stb_image.h"
+    "Libraries/tiny_obj_loader.h"
     "main.cpp"
     "VulkanBase.h"
     "VulkanBase.cpp"
@@ -41,7 +42,22 @@ set(SOURCES
     "DataBuffer.h"
     "DataBuffer.cpp"
     "Image.h"
-    "Image.cpp" "ImageView.h" "ImageView.cpp" "Sampler.h" "Sampler.cpp")
+    "Image.cpp"
+    "ImageView.h"
+    "ImageView.cpp"
+    "Sampler.h"
+    "Sampler.cpp"
+    "Model.h"
+    "Model.cpp"
+    "Scene.h"
+    "Scene.cpp"
+    "Shader.h"
+    "Shader.cpp"
+    "Camera.h"
+    "Camera.cpp"
+    "Timer.h"
+    "Timer.cpp"
+    "Singleton.h")
 
 set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/Project/Resources")
 file(COPY ${RESOURCES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
