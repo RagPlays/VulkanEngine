@@ -21,12 +21,10 @@ void Model::Destroy(VkDevice device)
     m_IndexBuffer.Destroy(device);
 }
 
-void Model::Draw(VkPipelineLayout pipelineLayout, VkCommandBuffer commandBuffer, VkDescriptorSet discriptorSet) const
+void Model::Draw(VkCommandBuffer commandBuffer) const
 {
     m_VertexBuffer.BindAsVertexBuffer(commandBuffer);
     m_IndexBuffer.BindAsIndexBuffer(commandBuffer);
-
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &discriptorSet, 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_Indices.size()), 1, 0, 0, 0);
 }

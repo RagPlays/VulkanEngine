@@ -112,9 +112,10 @@ private:
 
 	// Creating buffers
 	void CreateModel();
-	void CreateUniformBuffers();
-	void CleanupUniformBuffers();
-	void UpdateUniformBuffer(uint32_t currentImage);
+
+	// Camera
+	void CreateCamera();
+	void CleanupCamera();
 
 	// DescriptorPool
 	void CreateDescriptorPool();
@@ -185,32 +186,7 @@ private:
 	// Frames in flight
 	uint32_t m_CurrentFrame{ 0 };
 
-	// Buffers
-	std::vector<DataBuffer> m_UniformBuffers;
-	std::vector<void*> m_UniformBuffersMapped;
-
-	/*DataBuffer m_VertexBuffer;
-	DataBuffer m_IndexBuffer;
-
-	const std::vector<Vertex> m_Vertices
-	{
-		{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-		{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-		{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-		{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-	};
-
-	const std::vector<uint32_t> m_Indices
-	{
-		0, 1, 2, 2, 3, 0,
-		4, 5, 6, 6, 7, 4
-	};*/
-
+	// Model
 	Model m_Model;
 
 	// DescriptorPool

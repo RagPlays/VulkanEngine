@@ -1,10 +1,14 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include <vector>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "DataBuffer.h"
 
 class Camera
 {
@@ -13,18 +17,22 @@ public:
     Camera();
     ~Camera() = default;
 
-    void Update(float deltaTime, GLFWwindow* window);
+    void Initialize(VkDevice device, VkPhysicalDevice phyDevice, float aspectRatio, GLFWwindow* window);
+    void Destroy(VkDevice device);
 
-    // Getters for view and projection matrices
-    glm::mat4 Camera::GetModelMatrix() const;
-    glm::mat4 GetViewMatrix() const;
-    glm::mat4 GetProjectionMatrix(float aspectRatio) const;
+    void Update(uint32_t currentFrame);
+
+    const std::vector<DataBuffer>& GetUniformBuffers() const;
+
+private:
+
+    void UpdateCameraVectors();
+    void UpdateUniformBufferObjects(uint32_t currentFrame);
 
 private:
 
-    void LookAt(const glm::vec3 target);
-
-private:
+    GLFWwindow* m_Window;
+    float m_AspectRatio;
 
     glm::vec3 m_Position;
     glm::vec3 m_Front;
@@ -34,6 +42,7 @@ private:
 
     float m_Yaw;
     float m_Pitch;
+    float m_Roll;
 
     double m_LastMouseX;
     double m_LastMouseY;
@@ -41,7 +50,13 @@ private:
     float m_MovementSpeed;
     float m_Sensitivity;
 
-    void UpdateCameraVectors();
+    float m_FOV;
+    float m_Near;
+    float m_Far;
+
+    std::vector<DataBuffer> m_UniformBuffers;
+    std::vector<void*> m_UniformBuffersMapped;
+
 };
 
 #endif // !CAMERA_H

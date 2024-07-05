@@ -51,7 +51,7 @@ void VulkanBase::InitVulkan()
 	CreateTextureSampler();
 
 	CreateModel();
-	CreateUniformBuffers();
+	CreateCamera();
 
 	CreateDescriptorPool();
 	CreateDescriptorSets();
@@ -81,7 +81,8 @@ void VulkanBase::Cleanup()
 	m_TextureImage.Destroy();
 	m_Model.Destroy(m_Device);
 
-	CleanupUniformBuffers();
+	CleanupCamera();
+	
 	vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
 	vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
 	vkDestroyPipeline(m_Device, m_GraphicsPipeline, nullptr);
@@ -109,31 +110,38 @@ void VulkanBase::Cleanup()
 
 void VulkanBase::DrawFrame()
 {
-	// Synchronization - Fences
+	// Wait for the fence from the previous frame
 	vkWaitForFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
 
+	// Acquire the next image from the swap chain
 	uint32_t imageIndex{};
-	VkResult SwapChainResult
+	VkResult acquireResult
 	{
-		vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrame], VK_NULL_HANDLE, &imageIndex)
+		vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX,
+		m_ImageAvailableSemaphores[m_CurrentFrame],
+		VK_NULL_HANDLE, &imageIndex)
 	};
-	if (SwapChainResult == VK_ERROR_OUT_OF_DATE_KHR)
+
+	if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR || acquireResult == VK_SUBOPTIMAL_KHR)
 	{
 		RecreateSwapChain();
 		return;
 	}
-	else if (SwapChainResult != VK_SUCCESS && SwapChainResult != VK_SUBOPTIMAL_KHR)
+	else if (acquireResult != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to acquire swap chain image!");
+		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
 
+	// Reset the fence for this frame
 	vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame]);
 
+	// Update the camera (view and projection matrices) uniform buffer
+	m_Camera.Update(m_CurrentFrame);
+
+	// Record commands in the command buffer for this frame
 	RecordCommandBuffer(m_CommandBuffers[m_CurrentFrame], imageIndex);
 
-	UpdateUniformBuffer(m_CurrentFrame);
-
-	// SUBMIT //
+	// Submit the graphics command buffer
 	VkSemaphore waitSemaphores[]{ m_ImageAvailableSemaphores[m_CurrentFrame] };
 	VkPipelineStageFlags waitStages[]{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSemaphore signalSemaphores[]{ m_RenderFinishedSemaphores[m_CurrentFrame] };
@@ -147,31 +155,30 @@ void VulkanBase::DrawFrame()
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
 	m_CommandBuffers[m_CurrentFrame].Submit(submitInfo, m_GraphicsQueue, m_InFlightFences[m_CurrentFrame]);
-	// // // //
 
-	// PRESENT //
+	// Present the swap chain image
+	std::vector<VkSwapchainKHR> swapChains{ m_SwapChain };
 	VkPresentInfoKHR presentInfo{};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
 
-	VkSwapchainKHR swapChains[] = { m_SwapChain };
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
+	presentInfo.swapchainCount = static_cast<uint32_t>(swapChains.size());
+	presentInfo.pSwapchains = swapChains.data();
+
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr; // Optional
-	SwapChainResult = vkQueuePresentKHR(m_PresentQueue, &presentInfo);
-	// // // //
 
-	if (SwapChainResult == VK_ERROR_OUT_OF_DATE_KHR || SwapChainResult == VK_SUBOPTIMAL_KHR)
+	VkResult presentResult{ vkQueuePresentKHR(m_PresentQueue, &presentInfo) };
+
+	if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || m_FramebufferResized)
 	{
 		m_FramebufferResized = false;
 		RecreateSwapChain();
 	}
-	else if (SwapChainResult != VK_SUCCESS)
+	else if (presentResult != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to present swap chain image!");
+		throw std::runtime_error("Failed to present swap chain image!");
 	}
 
 	m_CurrentFrame = (m_CurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -901,6 +908,8 @@ void VulkanBase::CreateCommandBuffer()
 
 void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex)
 {
+	constexpr VkPipelineBindPoint bindPoint{ VK_PIPELINE_BIND_POINT_GRAPHICS };
+
 	std::array<VkClearValue, 2> clearValues{};
 	clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
 	clearValues[1].depthStencil = { 1.0f, 0 };
@@ -926,7 +935,7 @@ void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t image
 	scissor.offset = { 0, 0 };
 	scissor.extent = m_SwapChainExtent;
 
-	m_CommandBuffers[m_CurrentFrame].Reset();
+	commandBuffer.Reset();
 
 	commandBuffer.BeginRecording();
 
@@ -934,13 +943,15 @@ void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t image
 
 	commandBuffer.BeginRenderPass(renderPassInfo);
 	{
-		vkCmdBindPipeline(cmndBffr, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
+		vkCmdBindPipeline(cmndBffr, bindPoint, m_GraphicsPipeline);
 
 		vkCmdSetViewport(cmndBffr, 0, 1, &viewport);
 
 		vkCmdSetScissor(cmndBffr, 0, 1, &scissor);
 
-		m_Model.Draw(m_PipelineLayout, cmndBffr, m_DescriptorSets[m_CurrentFrame]);
+		vkCmdBindDescriptorSets(cmndBffr, bindPoint, m_PipelineLayout, 0, 1, &m_DescriptorSets[m_CurrentFrame], 0, nullptr);
+
+		m_Model.Draw(cmndBffr);
 	}
 	commandBuffer.EndRenderPass();
 
@@ -992,50 +1003,14 @@ void VulkanBase::CreateModel()
 	m_Model.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_ModelPath);
 }
 
-void VulkanBase::CreateUniformBuffers()
+void VulkanBase::CreateCamera()
 {
-	VkDeviceSize bufferSize{ sizeof(UniformBufferObject) };
-
-	m_UniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-	m_UniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
-
-	VkBufferUsageFlags uniformBuffersUsage{ VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT };
-	VkMemoryPropertyFlags uniformBuffersProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
-
-	for (size_t idx{}; idx < MAX_FRAMES_IN_FLIGHT; idx++)
-	{
-		m_UniformBuffers[idx].Initialize(m_Device, m_PhysicalDevice, uniformBuffersProperties, bufferSize, uniformBuffersUsage);
-		m_UniformBuffers[idx].Map(m_Device, bufferSize, &m_UniformBuffersMapped[idx]);
-	}
+	m_Camera.Initialize(m_Device, m_PhysicalDevice, g_AspectRatio, m_Window);
 }
 
-void VulkanBase::CleanupUniformBuffers()
+void VulkanBase::CleanupCamera()
 {
-	for (size_t idx{}; idx < MAX_FRAMES_IN_FLIGHT; idx++)
-	{
-		m_UniformBuffers[idx].Destroy(m_Device);
-	}
-}
-
-void VulkanBase::UpdateUniformBuffer(uint32_t currentImage)
-{
-	m_Camera.Update(Timer::Get().GetElapsedSec(), m_Window);
-	/*static auto startTime{ std::chrono::high_resolution_clock::now() };
-
-	const auto currentTime{ std::chrono::high_resolution_clock::now() };
-	const float time{ std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count() };*/
-
-	UniformBufferObject ubo{};
-	/*ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), m_SwapChainExtent.width / static_cast<float>(m_SwapChainExtent.height), 0.1f, 10.0f);
-	ubo.proj[1][1] *= -1;*/
-	ubo.model = m_Camera.GetModelMatrix();
-	ubo.view = m_Camera.GetViewMatrix();
-	ubo.proj = m_Camera.GetProjectionMatrix(m_SwapChainExtent.width / static_cast<float>(m_SwapChainExtent.height));
-	ubo.proj[1][1] *= -1;
-
-	memcpy(m_UniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+	m_Camera.Destroy(m_Device);
 }
 
 void VulkanBase::CreateDescriptorPool()
@@ -1074,10 +1049,12 @@ void VulkanBase::CreateDescriptorSets()
 		throw std::runtime_error("failed to allocate descriptor sets!");
 	}
 
+	const std::vector<DataBuffer> cameraBuffers{ m_Camera.GetUniformBuffers() };
+
 	for (size_t idx{}; idx < MAX_FRAMES_IN_FLIGHT; idx++)
 	{
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = m_UniformBuffers[idx].GetVkBuffer();
+		bufferInfo.buffer = cameraBuffers[idx].GetVkBuffer();
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(UniformBufferObject);
 

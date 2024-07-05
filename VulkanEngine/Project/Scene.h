@@ -2,6 +2,7 @@
 #define SCENE_H
 
 #include <vector>
+#include <string>
 
 #include "Model.h"
 
@@ -12,7 +13,10 @@ public:
 	Scene() = default;
 	~Scene() = default;
 
-	void Draw(VkPipelineLayout pipelineLayout, VkCommandBuffer commandBuffer, VkDescriptorSet discriptorSet);
+	void Initialize(const std::string& filePath);
+	void Initialize(std::vector<Model>&& models);
+
+	void Draw(VkCommandBuffer commandBuffer);
 
 private:
 

@@ -17,7 +17,7 @@ public:
 	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::string& filePath);
 	void Destroy(VkDevice device);
 
-	void Draw(VkPipelineLayout pipelineLayout, VkCommandBuffer commandBuffer, VkDescriptorSet discriptorSet) const;
+	void Draw(VkCommandBuffer commandBuffer) const;
 
 private:
 
