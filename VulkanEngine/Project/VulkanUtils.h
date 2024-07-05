@@ -14,27 +14,10 @@ constexpr uint32_t g_WindowWidth{ 1280 };
 constexpr uint32_t g_WindowHeight{ 720 };
 constexpr float g_AspectRatio{ g_WindowWidth / static_cast<float>(g_WindowHeight) };
 
-const std::string g_ModelPath{ "Resources/Models/viking_room.obj" };
-const std::string g_TexturePath{ "Resources/Models/viking_room.png" };
+const std::string g_Model1Path{ "Resources/Models/viking_room.obj" };
+const std::string g_Texture1Path{ "Resources/Models/viking_room.png" };
 
-const std::vector<const char*> g_ValidationLayers{ "VK_LAYER_KHRONOS_validation" };
-const std::vector<const char*> g_DeviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
-VkResult CreateDebugUtilsMessengerEXT
-(
-	VkInstance instance,
-	const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-	const VkAllocationCallbacks* pAllocator,
-	VkDebugUtilsMessengerEXT* pDebugMessenger
-);
-
-void DestroyDebugUtilsMessengerEXT
-(
-	VkInstance instance,
-	VkDebugUtilsMessengerEXT debugMessenger,
-	const VkAllocationCallbacks* pAllocator
-);
-
-std::vector<char> ReadFile(const std::string& filename);
+const std::string g_Model2Path{ "Resources/Models/cube.obj" };
+const std::string g_Texture2Path{ "Resources/Models/viking_room.png" };
 
 #endif //!VULKANUTILS_H

@@ -30,7 +30,6 @@ set(SOURCES
     "VulkanBase.h"
     "VulkanBase.cpp"
     "VulkanUtils.h"
-    "VulkanUtils.cpp"
     "VulkanStructs.h"
     "VulkanStructs.cpp"
     "RenderPass.h"
@@ -57,17 +56,25 @@ set(SOURCES
     "Camera.cpp"
     "Timer.h"
     "Timer.cpp"
-    "Singleton.h")
+    "Singleton.h"
+    "SyncObjects.h"
+    "SyncObjects.cpp"
+    "VulkanInstance.h"
+    "VulkanInstance.cpp"
+    "Surface.h"
+    "Surface.cpp")
 
 set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/Project/Resources")
-file(COPY ${RESOURCES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+set(DESTINATION_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+
+# Copy resources to build directory using add_custom_target with DEPENDS
+file(COPY ${RESOURCES_DIR} DESTINATION ${DESTINATION_DIR})
 add_custom_target(CopyResources ALL
     COMMENT "Copying resources directory to build directory"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${RESOURCES_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+    ${RESOURCES_DIR} ${DESTINATION_DIR}
     DEPENDS ${RESOURCES_DIR}
 )
-
 # Create the executable
 add_executable(VulkanEngine ${SOURCES} ${GLSL_SOURCE_FILES} )
 add_dependencies(${PROJECT_NAME} Shaders)

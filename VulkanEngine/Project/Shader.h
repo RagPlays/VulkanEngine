@@ -22,6 +22,8 @@ private:
 
     VkShaderModule CreateShaderModule(const std::vector<char>& code) const;
 
+    std::vector<char> ReadFile(const std::string& filename);
+
 private:
 
     const std::string m_FilePath;

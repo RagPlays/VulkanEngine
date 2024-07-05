@@ -1,4 +1,5 @@
 #include <unordered_map>
+#include <iostream>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <Libraries/tiny_obj_loader.h>
@@ -39,6 +40,8 @@ void Model::InitVerticesIndices(const std::string& filePath)
     std::vector<tinyobj::material_t> materials{};
     std::string warn{};
     std::string err{};
+
+    std::cout << "Attempting to load OBJ file from: " << filePath << "\n";
 
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str()))
     {

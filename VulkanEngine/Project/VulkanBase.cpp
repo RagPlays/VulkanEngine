@@ -27,16 +27,16 @@ void VulkanBase::InitWindow()
 
 void VulkanBase::InitVulkan()
 {
-	CreateInstance();
-	SetupDebugMessenger();
-	CreateSurface();
+	m_VulkanInstance.Initialize("VulkanEngine", "MorrogEngine", m_Window);
+	m_Surface.Initialize(m_VulkanInstance.GetVkInstance(), m_Window);
+
 	PickPhysicalDevice();
 	CreateLogicDevice();
 
 	CreateSwapChain();
 	CreateSwapChainImageViews();
 	
-	CreateRenderPass();
+	m_RenderPass.Initialize(m_Device, m_SwapChainImageFormat, FindDepthFormat());
 	CreateDescriptorSetLayout();
 	CreateGraphicsPipelineLayout();
 	CreateGraphicsPipeline();
@@ -50,15 +50,15 @@ void VulkanBase::InitVulkan()
 	CreateTextureImageView();
 	CreateTextureSampler();
 
-	CreateModel();
-	CreateCamera();
+	CreateScene();
+	m_Camera.Initialize(m_Device, m_PhysicalDevice, g_AspectRatio, m_Window);
 
 	CreateDescriptorPool();
 	CreateDescriptorSets();
 
 	CreateCommandBuffer();
 
-	CreateSyncObjects();
+	m_SyncObjects.Initialize(m_Device);
 }
 
 void VulkanBase::MainLoop()
@@ -79,9 +79,10 @@ void VulkanBase::Cleanup()
 	m_TextureSampler.Destroy(m_Device);
 	m_TextureImageView.Destroy(m_Device);
 	m_TextureImage.Destroy();
-	m_Model.Destroy(m_Device);
 
-	CleanupCamera();
+	m_Scene.Destroy(m_Device);
+
+	m_Camera.Destroy(m_Device);
 	
 	vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
 	vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
@@ -90,19 +91,15 @@ void VulkanBase::Cleanup()
 
 	m_RenderPass.Destroy(m_Device);
 
-	CleanupSyncObjects();
+	m_SyncObjects.Destroy(m_Device);
 
 	m_CommandPool.Destroy(m_Device);
 
 	vkDestroyDevice(m_Device, nullptr);
 
-	if (m_ValidationLayersEnabled)
-	{
-		DestroyDebugUtilsMessengerEXT(m_VulkanInstance, m_DebugMessenger, nullptr);
-	}
+	m_Surface.Destroy(m_VulkanInstance.GetVkInstance());
 
-	vkDestroySurfaceKHR(m_VulkanInstance, m_Surface, nullptr);
-	vkDestroyInstance(m_VulkanInstance, nullptr);
+	m_VulkanInstance.Destroy();
 
 	glfwDestroyWindow(m_Window);
 	glfwTerminate();
@@ -110,15 +107,20 @@ void VulkanBase::Cleanup()
 
 void VulkanBase::DrawFrame()
 {
+	// Get Sync Objects
+	const VkFence& inFlightFence{ m_SyncObjects.GetInFlightFence(m_CurrentFrame) };
+	const VkSemaphore& imageAvailableSemaphore{ m_SyncObjects.GetImageAvailableSemaphore(m_CurrentFrame) };
+	const VkSemaphore& renderFinishedSemaphore{ m_SyncObjects.GetRenderFinishedSemaphore(m_CurrentFrame) };
+
 	// Wait for the fence from the previous frame
-	vkWaitForFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
+	vkWaitForFences(m_Device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 
 	// Acquire the next image from the swap chain
 	uint32_t imageIndex{};
 	VkResult acquireResult
 	{
 		vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX,
-		m_ImageAvailableSemaphores[m_CurrentFrame],
+		imageAvailableSemaphore,
 		VK_NULL_HANDLE, &imageIndex)
 	};
 
@@ -133,7 +135,7 @@ void VulkanBase::DrawFrame()
 	}
 
 	// Reset the fence for this frame
-	vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame]);
+	vkResetFences(m_Device, 1, &inFlightFence);
 
 	// Update the camera (view and projection matrices) uniform buffer
 	m_Camera.Update(m_CurrentFrame);
@@ -142,9 +144,9 @@ void VulkanBase::DrawFrame()
 	RecordCommandBuffer(m_CommandBuffers[m_CurrentFrame], imageIndex);
 
 	// Submit the graphics command buffer
-	VkSemaphore waitSemaphores[]{ m_ImageAvailableSemaphores[m_CurrentFrame] };
+	VkSemaphore waitSemaphores[]{ imageAvailableSemaphore };
 	VkPipelineStageFlags waitStages[]{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	VkSemaphore signalSemaphores[]{ m_RenderFinishedSemaphores[m_CurrentFrame] };
+	VkSemaphore signalSemaphores[]{ renderFinishedSemaphore };
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -154,7 +156,7 @@ void VulkanBase::DrawFrame()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	m_CommandBuffers[m_CurrentFrame].Submit(submitInfo, m_GraphicsQueue, m_InFlightFences[m_CurrentFrame]);
+	m_CommandBuffers[m_CurrentFrame].Submit(submitInfo, m_GraphicsQueue, inFlightFence);
 
 	// Present the swap chain image
 	std::vector<VkSwapchainKHR> swapChains{ m_SwapChain };
@@ -190,145 +192,10 @@ void VulkanBase::FramebufferResizeCallback(GLFWwindow* window, int width, int he
 	app->m_FramebufferResized = true;
 }
 
-void VulkanBase::CreateInstance()
-{
-	if (m_ValidationLayersEnabled && !CheckValidationLayerSupport())
-	{
-		throw std::runtime_error("validation layers requested, but not available!");
-	}
-
-	VkApplicationInfo appInfo{};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "VulkanEngine";
-	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = "MorrogEngine";
-	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_0;
-
-	VkInstanceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pApplicationInfo = &appInfo;
-
-	auto extensions = GetRequiredExtensions();
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.ppEnabledExtensionNames = extensions.data();
-
-	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-	if (m_ValidationLayersEnabled)
-	{
-		createInfo.enabledLayerCount = static_cast<uint32_t>(g_ValidationLayers.size());
-		createInfo.ppEnabledLayerNames = g_ValidationLayers.data();
-
-		PopulateDebugMessengerCreateInfo(debugCreateInfo);
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-	}
-	else
-	{
-		createInfo.enabledLayerCount = 0;
-		createInfo.pNext = nullptr;
-	}
-
-	if (vkCreateInstance(&createInfo, nullptr, &m_VulkanInstance) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to create instance!");
-	}
-}
-
-void VulkanBase::SetupDebugMessenger()
-{
-	if (!m_ValidationLayersEnabled) return;
-
-	VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-	PopulateDebugMessengerCreateInfo(createInfo);
-
-	if (CreateDebugUtilsMessengerEXT(m_VulkanInstance, &createInfo, nullptr, &m_DebugMessenger) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to set up debug messenger!");
-	}
-}
-
-void VulkanBase::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
-{
-	createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	createInfo.pfnUserCallback = DebugCallback;
-	createInfo.pUserData = nullptr; // Optional
-}
-
-std::vector<const char*> VulkanBase::GetRequiredExtensions()
-{
-	uint32_t glfwExtensionCount{};
-	const char** glfwExtensions{ glfwGetRequiredInstanceExtensions(&glfwExtensionCount) };
-
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-	if (m_ValidationLayersEnabled) extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-	return extensions;
-}
-
-bool VulkanBase::CheckValidationLayerSupport()
-{
-	uint32_t layerCount{};
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-	std::vector<VkLayerProperties> availableLayers{ layerCount };
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-	for (const char* layerName : g_ValidationLayers)
-	{
-		bool layerFound{ false };
-
-		for (const auto& layerProperties : availableLayers)
-		{
-			if (strcmp(layerName, layerProperties.layerName) == 0)
-			{
-				layerFound = true;
-				break;
-			}
-		}
-
-		if (!layerFound) return false;
-	}
-	return true;
-}
-
-bool VulkanBase::CheckDeviceExtensionSupport(VkPhysicalDevice device)
-{
-	uint32_t extensionCount{};
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-	std::vector<VkExtensionProperties> availableExtensions{ extensionCount };
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-	std::set<std::string> requiredExtensions{ g_DeviceExtensions.begin(), g_DeviceExtensions.end() };
-
-	for (const auto& extension : availableExtensions)
-	{
-		requiredExtensions.erase(extension.extensionName);
-	}
-
-	return requiredExtensions.empty();
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL VulkanBase::DebugCallback
-(
-	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-	VkDebugUtilsMessageTypeFlagsEXT messageType,
-	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData
-)
-{
-	std::cerr << "validation layer: " << pCallbackData->pMessage << "\n";
-	return VK_FALSE;
-}
-
 void VulkanBase::PickPhysicalDevice()
 {
 	uint32_t deviceCount{ 0 };
-	vkEnumeratePhysicalDevices(m_VulkanInstance, &deviceCount, nullptr);
+	vkEnumeratePhysicalDevices(m_VulkanInstance.GetVkInstance(), &deviceCount, nullptr);
 
 	if (deviceCount == 0)
 	{
@@ -336,7 +203,7 @@ void VulkanBase::PickPhysicalDevice()
 	}
 
 	std::vector<VkPhysicalDevice> devices{ deviceCount };
-	vkEnumeratePhysicalDevices(m_VulkanInstance, &deviceCount, devices.data());
+	vkEnumeratePhysicalDevices(m_VulkanInstance.GetVkInstance(), &deviceCount, devices.data());
 
 	if (deviceCount == 0)
 	{
@@ -388,13 +255,13 @@ void VulkanBase::CreateLogicDevice()
 
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(g_DeviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = g_DeviceExtensions.data();
+	createInfo.enabledExtensionCount = m_VulkanInstance.GetExtensionCount();
+	createInfo.ppEnabledExtensionNames = m_VulkanInstance.GetExtionsionNames();
 
-	if (m_ValidationLayersEnabled)
+	if (m_VulkanInstance.GetValidationLayersEnabled())
 	{
-		createInfo.enabledLayerCount = static_cast<uint32_t>(g_ValidationLayers.size());
-		createInfo.ppEnabledLayerNames = g_ValidationLayers.data();
+		createInfo.enabledLayerCount = m_VulkanInstance.GetValidationLayersCount();
+		createInfo.ppEnabledLayerNames = m_VulkanInstance.GetValidationLayersNames();
 	}
 	else
 	{
@@ -413,7 +280,7 @@ void VulkanBase::CreateLogicDevice()
 bool VulkanBase::IsDeviceSuitable(VkPhysicalDevice device)
 {
 	QueueFamilyIndices indices{ FindQueueFamilies(device) };
-	bool extensionsSupported{ CheckDeviceExtensionSupport(device) };
+	bool extensionsSupported{ VulkanInstance::CheckDeviceExtensionSupport(device) };
 	bool swapChainAdequate{ false };
 	if (extensionsSupported)
 	{
@@ -445,7 +312,7 @@ QueueFamilyIndices VulkanBase::FindQueueFamilies(VkPhysicalDevice device)
 		}
 
 		VkBool32 presentSupport{ false };
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, idx, m_Surface, &presentSupport);
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, idx, m_Surface.GetVkSurface(), &presentSupport);
 
 		if (presentSupport)
 		{
@@ -458,14 +325,6 @@ QueueFamilyIndices VulkanBase::FindQueueFamilies(VkPhysicalDevice device)
 	}
 
 	return indices;
-}
-
-void VulkanBase::CreateSurface()
-{
-	if (glfwCreateWindowSurface(m_VulkanInstance, m_Window, nullptr, &m_Surface) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to create window surface!");
-	}
 }
 
 void VulkanBase::CreateSwapChain()
@@ -487,7 +346,7 @@ void VulkanBase::CreateSwapChain()
 
 	VkSwapchainCreateInfoKHR createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = m_Surface;
+	createInfo.surface = m_Surface.GetVkSurface();
 
 	createInfo.minImageCount = imageCount;
 	createInfo.imageFormat = surfaceFormat.format;
@@ -612,25 +471,27 @@ void VulkanBase::CleanupSwapChain()
 
 SwapChainSupportDetails VulkanBase::QuerySwapChainSupport(VkPhysicalDevice device)
 {
+	const VkSurfaceKHR surface{ m_Surface.GetVkSurface() };
+
 	SwapChainSupportDetails details{};
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_Surface, &details.capabilities);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
 	uint32_t formatCount{};
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
 
 	if (formatCount)
 	{
 		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, details.formats.data());
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
 	}
 
 	uint32_t presentModeCount{};
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, nullptr);
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
 	if (presentModeCount)
 	{
 		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, details.presentModes.data());
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
 	}
 
 	return details;
@@ -691,11 +552,6 @@ VkExtent2D VulkanBase::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
 
 		return actualExtent;
 	}
-}
-
-void VulkanBase::CreateRenderPass()
-{
-	m_RenderPass.Initialize(m_Device, m_SwapChainImageFormat, FindDepthFormat());
 }
 
 void VulkanBase::CreateDescriptorSetLayout()
@@ -951,66 +807,11 @@ void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t image
 
 		vkCmdBindDescriptorSets(cmndBffr, bindPoint, m_PipelineLayout, 0, 1, &m_DescriptorSets[m_CurrentFrame], 0, nullptr);
 
-		m_Model.Draw(cmndBffr);
+		m_Scene.Draw(cmndBffr);
 	}
 	commandBuffer.EndRenderPass();
 
 	commandBuffer.EndRecording();
-}
-
-void VulkanBase::CreateSyncObjects()
-{
-	m_ImageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_RenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_InFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-	VkSemaphoreCreateInfo semaphoreInfo{};
-	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VkFenceCreateInfo fenceInfo{};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-	for (int idx{}; idx < MAX_FRAMES_IN_FLIGHT; idx++)
-	{
-		if (vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphores[idx]) != VK_SUCCESS ||
-			vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphores[idx]) != VK_SUCCESS ||
-			vkCreateFence(m_Device, &fenceInfo, nullptr, &m_InFlightFences[idx]) != VK_SUCCESS) {
-
-			throw std::runtime_error("failed to create synchronization objects for a frame!");
-		}
-	}
-}
-
-void VulkanBase::CleanupSyncObjects()
-{
-	for (auto imageAbailableSemaphore : m_ImageAvailableSemaphores)
-	{
-		vkDestroySemaphore(m_Device, imageAbailableSemaphore, nullptr);
-	}
-	for (auto renderFinishedSemaphore : m_RenderFinishedSemaphores)
-	{
-		vkDestroySemaphore(m_Device, renderFinishedSemaphore, nullptr);
-	}
-	for (auto inFlightFence : m_InFlightFences)
-	{
-		vkDestroyFence(m_Device, inFlightFence, nullptr);
-	}
-}
-
-void VulkanBase::CreateModel()
-{
-	m_Model.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_ModelPath);
-}
-
-void VulkanBase::CreateCamera()
-{
-	m_Camera.Initialize(m_Device, m_PhysicalDevice, g_AspectRatio, m_Window);
-}
-
-void VulkanBase::CleanupCamera()
-{
-	m_Camera.Destroy(m_Device);
 }
 
 void VulkanBase::CreateDescriptorPool()
@@ -1097,7 +898,7 @@ void VulkanBase::CreateTextureImage()
 	int texHeight{};
 	int texChannels{};
 
-	stbi_uc* pixels{ stbi_load(g_TexturePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha)};
+	stbi_uc* pixels{ stbi_load(g_Texture1Path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha)};
 	const VkDeviceSize imageSize{ static_cast<uint64_t>(texWidth * texHeight * 4) };
 
 	if (!pixels) throw std::runtime_error("failed to load texture image!");
@@ -1133,6 +934,22 @@ void VulkanBase::CreateTextureImageView()
 void VulkanBase::CreateTextureSampler()
 {
 	m_TextureSampler.Initialize(m_Device, m_PhysicalDevice);
+}
+
+void VulkanBase::CreateScene()
+{
+	std::vector<Model> models{};
+
+	Model model1{};
+	model1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
+
+	Model model2{};
+	model2.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+
+	models.emplace_back(std::move(model1));
+	models.emplace_back(std::move(model2));
+
+	m_Scene.Initialize(std::move(models));
 }
 
 void VulkanBase::CreateDepthResources()

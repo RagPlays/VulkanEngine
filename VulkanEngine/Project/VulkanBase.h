@@ -33,9 +33,11 @@
 #include "Sampler.h"
 #include "Model.h"
 #include "Shader.h"
-
-
+#include "SyncObjects.h"
+#include "VulkanInstance.h"
+#include "Surface.h"
 #include "Camera.h"
+#include "Scene.h"
 
 class VulkanBase final
 {
@@ -57,29 +59,11 @@ private:
 
 	static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-	// Instances And Debug Messeges
-	void CreateInstance();
-	void SetupDebugMessenger();
-	void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-	std::vector<const char*> VulkanBase::GetRequiredExtensions();
-	bool CheckValidationLayerSupport();
-	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
-	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback
-	(
-		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		VkDebugUtilsMessageTypeFlagsEXT messageType,
-		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		void* pUserData
-	);
-
 	// Phicsical Devices
 	void PickPhysicalDevice();
 	void CreateLogicDevice();
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
-
-	// Surface
-	void CreateSurface();
 
 	// SwapChain
 	void CreateSwapChain();
@@ -92,9 +76,6 @@ private:
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-	// RenderPass
-	void CreateRenderPass();
-
 	// Graphics Pipeline
 	void CreateDescriptorSetLayout();
 	void CreateGraphicsPipelineLayout();
@@ -105,17 +86,6 @@ private:
 	void CreateCommandPool();
 	void CreateCommandBuffer();
 	void RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex);
-	
-	//SyncObjects
-	void CreateSyncObjects();
-	void CleanupSyncObjects();
-
-	// Creating buffers
-	void CreateModel();
-
-	// Camera
-	void CreateCamera();
-	void CleanupCamera();
 
 	// DescriptorPool
 	void CreateDescriptorPool();
@@ -125,6 +95,9 @@ private:
 	void CreateTextureImage();
 	void CreateTextureImageView();
 	void CreateTextureSampler();
+
+	// Scene
+	void CreateScene();
 
 	// Depth Buffer
 	void CreateDepthResources();
@@ -138,22 +111,16 @@ private:
 	GLFWwindow* m_Window;
 
 	// Instances And Debug Messeges
-	VkInstance m_VulkanInstance;
-#ifdef NDEBUG
-	const bool m_ValidationLayersEnabled{ false };
-#else
-	const bool m_ValidationLayersEnabled{ true };
-#endif
-	VkDebugUtilsMessengerEXT m_DebugMessenger;
+	VulkanInstance m_VulkanInstance;
 
-	// Physical Device
+	// Window Surface
+	Surface m_Surface;
+
+	// Devices
 	VkPhysicalDevice m_PhysicalDevice{ VK_NULL_HANDLE };
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
 	VkQueue m_PresentQueue;
-
-	// Window Surface
-	VkSurfaceKHR m_Surface;
 
 	// SwapChain
 	VkSwapchainKHR m_SwapChain;
@@ -178,16 +145,14 @@ private:
 	std::vector<CommandBuffer> m_CommandBuffers;
 
 	// Sync Objects
-	std::vector<VkSemaphore> m_ImageAvailableSemaphores;
-	std::vector<VkSemaphore> m_RenderFinishedSemaphores;
-	std::vector<VkFence> m_InFlightFences;
-	bool m_FramebufferResized{ false };
+	SyncObjects m_SyncObjects;
+	bool m_FramebufferResized;
 
 	// Frames in flight
 	uint32_t m_CurrentFrame{ 0 };
 
-	// Model
-	Model m_Model;
+	// Scene
+	Scene m_Scene;
 
 	// DescriptorPool
 	VkDescriptorPool m_DescriptorPool;

@@ -121,8 +121,8 @@ void Camera::Update(uint32_t currentFrame)
     if (change)
     {
         UpdateCameraVectors();
-        UpdateUniformBufferObjects(currentFrame);
     }
+    UpdateUniformBufferObjects(currentFrame);
 }
 
 const std::vector<DataBuffer>& Camera::GetUniformBuffers() const

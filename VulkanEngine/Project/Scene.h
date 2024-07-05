@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 
+#include <vulkan/vulkan.h>
+
 #include "Model.h"
 
 class Scene final
@@ -15,6 +17,8 @@ public:
 
 	void Initialize(const std::string& filePath);
 	void Initialize(std::vector<Model>&& models);
+
+	void Destroy(VkDevice device);
 
 	void Draw(VkCommandBuffer commandBuffer);
 
