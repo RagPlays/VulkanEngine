@@ -3,6 +3,12 @@
 
 #include <vector>
 
+#define VK_USE_PLATFORM_WIN32_KHR
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -21,6 +27,8 @@ public:
     void Destroy(VkDevice device);
 
     void Update(uint32_t currentFrame);
+
+    void SetModelMatrix(const glm::mat4& modelMatrix);
 
     const std::vector<DataBuffer>& GetUniformBuffers() const;
 
@@ -42,7 +50,7 @@ private:
 
     float m_Yaw;
     float m_Pitch;
-    float m_Roll;
+    //float m_Roll;
 
     double m_LastMouseX;
     double m_LastMouseY;
@@ -54,6 +62,10 @@ private:
     float m_Near;
     float m_Far;
 
+    glm::mat4 m_ViewMatrix{};
+    glm::mat4 m_ProjectionMatrix{};
+
+    uint32_t m_CurrentFrame;
     std::vector<DataBuffer> m_UniformBuffers;
     std::vector<void*> m_UniformBuffersMapped;
 

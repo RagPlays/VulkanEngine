@@ -18,10 +18,10 @@ void Scene::Destroy(VkDevice device)
 	}
 }
 
-void Scene::Draw(VkCommandBuffer commandBuffer)
+void Scene::Draw(VkCommandBuffer commandBuffer, Camera* camera)
 {
-	for (const auto& model : m_Models)
+	/*for (const auto& model : m_Models)
 	{
-		model.Draw(commandBuffer);
-	}
+		model.Draw(commandBuffer, camera);
+	}*/
 }

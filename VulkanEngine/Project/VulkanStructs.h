@@ -33,6 +33,22 @@ struct UniformBufferObject
 	alignas(16) glm::mat4 proj{};
 };
 
+struct Transform
+{
+	glm::vec3 position{ 0.f };
+	glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
+	glm::vec3 scale{ 1.f };
+
+	glm::mat4 GetModelMatrix() const
+	{
+		glm::mat4 model{ glm::mat4{ 1.f } };
+		model = glm::translate(model, position);
+		model = model * glm::mat4_cast(rotation);
+		model = glm::scale(model, scale);
+		return model;
+	}
+};
+
 struct Vertex
 {
 	glm::vec3 pos{};

@@ -74,7 +74,6 @@ const VkDeviceSize& DataBuffer::GetSizeInBytes() const
 void DataBuffer::Upload(VkDevice device, VkDeviceSize size, const void* data)
 {
     void* mappedData{};
-    //vkMapMemory(device, m_VkBufferMemory, 0, size, 0, &mappedData);
     Map(device, size, &mappedData);
     if(mappedData) memcpy(mappedData, data, static_cast<size_t>(size));
     vkUnmapMemory(device, m_VkBufferMemory);

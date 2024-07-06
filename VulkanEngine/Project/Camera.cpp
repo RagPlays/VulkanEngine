@@ -19,7 +19,7 @@ Camera::Camera()
     , m_WorldUp{ glm::vec3{ 0.f, 1.f, 0.f } }
     , m_Yaw{ -90.f }
     , m_Pitch{ 0.f }
-    , m_Roll{ 0.f }
+    //, m_Roll{ 0.f }
     , m_MovementSpeed{ 3.f }
     , m_Sensitivity{ 0.13f }
 {
@@ -62,6 +62,8 @@ void Camera::Destroy(VkDevice device)
 
 void Camera::Update(uint32_t currentFrame)
 {
+    m_CurrentFrame = currentFrame;
+
     bool change{ false };
     const float deltaTime{ Timer::Get().GetElapsedSec() };
     float moveSpeed{ m_MovementSpeed };
@@ -125,6 +127,13 @@ void Camera::Update(uint32_t currentFrame)
     UpdateUniformBufferObjects(currentFrame);
 }
 
+void Camera::SetModelMatrix(const glm::mat4& modelMatrix)
+{
+    UniformBufferObject ubo{ modelMatrix, m_ViewMatrix, m_ProjectionMatrix };
+
+    memcpy(m_UniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
+}
+
 const std::vector<DataBuffer>& Camera::GetUniformBuffers() const
 {
     return m_UniformBuffers;
@@ -142,20 +151,18 @@ void Camera::UpdateCameraVectors()
     m_Right = glm::normalize(glm::cross(m_Front, m_WorldUp));
     m_Up = glm::normalize(glm::cross(m_Right, m_Front));
 
-    // Apply roll rotation
-    glm::mat4 rollMatrix{ glm::rotate(glm::mat4{ 1.f }, glm::radians(m_Roll), m_Front) };
+    /*glm::mat4 rollMatrix{ glm::rotate(glm::mat4{ 1.f }, glm::radians(m_Roll), m_Front) };
     m_Right = glm::vec3{ rollMatrix * glm::vec4{ m_Right, 0.f } };
-    m_Up = glm::vec3{ rollMatrix * glm::vec4{ m_Up, 0.0f } };
+    m_Up = glm::vec3{ rollMatrix * glm::vec4{ m_Up, 0.0f } };*/
+
+    m_ViewMatrix = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
+    m_ProjectionMatrix = glm::perspective(glm::radians(m_FOV), m_AspectRatio, m_Near, m_Far);
+    m_ProjectionMatrix[1][1] *= -1;
 }
 
 void Camera::UpdateUniformBufferObjects(uint32_t currentFrame)
 {
-    // Set right UBO //
-    glm::mat4 view{ glm::lookAt(m_Position, m_Position + m_Front, m_Up) };
-    glm::mat4 proj{ glm::perspective(glm::radians(m_FOV), m_AspectRatio, m_Near, m_Far) };
-    proj[1][1] *= -1;
-
-    UniformBufferObject ubo{ glm::mat4{ 1.f }, view, proj };
+    UniformBufferObject ubo{ glm::mat4{ 1.f }, m_ViewMatrix, m_ProjectionMatrix };
 
     memcpy(m_UniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }

@@ -152,7 +152,8 @@ private:
 	uint32_t m_CurrentFrame{ 0 };
 
 	// Scene
-	Scene m_Scene;
+	//Scene m_Scene;
+	Model m_Model;
 
 	// DescriptorPool
 	VkDescriptorPool m_DescriptorPool;

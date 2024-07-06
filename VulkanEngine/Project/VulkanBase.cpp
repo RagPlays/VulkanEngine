@@ -80,7 +80,8 @@ void VulkanBase::Cleanup()
 	m_TextureImageView.Destroy(m_Device);
 	m_TextureImage.Destroy();
 
-	m_Scene.Destroy(m_Device);
+	//m_Scene.Destroy(m_Device);
+	m_Model.Destroy(m_Device);
 
 	m_Camera.Destroy(m_Device);
 	
@@ -137,11 +138,11 @@ void VulkanBase::DrawFrame()
 	// Reset the fence for this frame
 	vkResetFences(m_Device, 1, &inFlightFence);
 
-	// Update the camera (view and projection matrices) uniform buffer
-	m_Camera.Update(m_CurrentFrame);
-
 	// Record commands in the command buffer for this frame
 	RecordCommandBuffer(m_CommandBuffers[m_CurrentFrame], imageIndex);
+
+	// Update the camera (view and projection matrices) uniform buffer
+	m_Camera.Update(m_CurrentFrame);
 
 	// Submit the graphics command buffer
 	VkSemaphore waitSemaphores[]{ imageAvailableSemaphore };
@@ -807,7 +808,7 @@ void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t image
 
 		vkCmdBindDescriptorSets(cmndBffr, bindPoint, m_PipelineLayout, 0, 1, &m_DescriptorSets[m_CurrentFrame], 0, nullptr);
 
-		m_Scene.Draw(cmndBffr);
+		m_Model.Draw(cmndBffr, &m_Camera);
 	}
 	commandBuffer.EndRenderPass();
 
@@ -819,6 +820,7 @@ void VulkanBase::CreateDescriptorPool()
 	std::array<VkDescriptorPoolSize, 2> poolSizes{};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -938,7 +940,7 @@ void VulkanBase::CreateTextureSampler()
 
 void VulkanBase::CreateScene()
 {
-	std::vector<Model> models{};
+	/*std::vector<Model> models{};
 
 	Model model1{};
 	model1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
@@ -949,7 +951,13 @@ void VulkanBase::CreateScene()
 	models.emplace_back(std::move(model1));
 	models.emplace_back(std::move(model2));
 
-	m_Scene.Initialize(std::move(models));
+	m_Scene.Initialize(std::move(models));*/
+
+	m_Model.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
+
+	//m_Model.SetRotation(glm::quat{ 3.f, 60.f, 80.f, 3.f });
+	//m_Model.SetPosition(glm::vec3{ 10.f, 1.f, 1.f });
+	m_Model.SetScale(glm::vec3{ 0.8f, 1.0f, 0.5f });
 }
 
 void VulkanBase::CreateDepthResources()

@@ -8,6 +8,8 @@
 
 #include "Model.h"
 
+class Camera;
+
 class Scene final
 {
 public:
@@ -17,12 +19,9 @@ public:
 
 	void Initialize(const std::string& filePath);
 	void Initialize(std::vector<Model>&& models);
-
 	void Destroy(VkDevice device);
 
-	void Draw(VkCommandBuffer commandBuffer);
-
-private:
+	void Draw(VkCommandBuffer commandBuffer, Camera* camera);
 
 private:
 
