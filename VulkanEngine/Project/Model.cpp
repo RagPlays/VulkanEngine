@@ -3,9 +3,27 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <Libraries/tiny_obj_loader.h>
 
+//#define GLM_FORCE_RADIANS
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#include <glm/glm.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
+
 #include "Model.h"
 #include "VulkanUtils.h"
 #include "Camera.h"
+
+Model::Model()
+    : m_ModelUBOs{}
+    , m_ModelUBOsMapped{}
+    , m_Transform{}
+    , m_ModelMatrix{}
+    , m_NrIndices{}
+    , m_VertexBuffer{}
+    , m_IndexBuffer{}
+{
+    m_ModelUBOs.clear();
+    m_ModelUBOsMapped.clear();
+}
 
 void Model::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::string& filePath)
 {
@@ -15,12 +33,18 @@ void Model::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queu
 
     LoadModelFromFile(filePath, vertices, indices);
     InitDataBuffers(device, phyDevice, queue, commandPool, vertices, indices);
+    InitUBOBuffers(device, phyDevice);
 }
 
 void Model::Destroy(VkDevice device)
 {
     m_VertexBuffer.Destroy(device);
     m_IndexBuffer.Destroy(device);
+
+    for (auto& ubo : m_ModelUBOs)
+    {
+        ubo.Destroy(device);
+    }
 }
 
 void Model::SetPosition(glm::vec3 position)
@@ -35,10 +59,20 @@ void Model::SetRotation(glm::quat rotation)
     UpdateModelMatrix();
 }
 
+void Model::SetRotation(glm::vec3 rotation)
+{
+    //glm::quat rot{ glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f), rotation) };
+}
+
 void Model::SetScale(glm::vec3 scale)
 {
     m_Transform.scale = scale;
     UpdateModelMatrix();
+}
+
+void Model::SetScale(float scale)
+{
+    SetScale(glm::vec3{ scale, scale, scale });
 }
 
 void Model::SetTranform(const Transform& transform)
@@ -47,8 +81,30 @@ void Model::SetTranform(const Transform& transform)
     UpdateModelMatrix();
 }
 
-void Model::Draw(VkCommandBuffer commandBuffer, Camera* camera) const
+const glm::mat4& Model::GetModelMatrix() const
 {
+    return m_ModelMatrix;
+}
+
+const std::vector<DataBuffer>& Model::GetBuffers() const
+{
+    return m_ModelUBOs;
+}
+
+void Model::UpdateUniformBuffers(uint32_t currentFrame)
+{
+    ModelUBO ubo{};
+    ubo.model = m_ModelMatrix;
+
+    memcpy(m_ModelUBOsMapped[currentFrame], &ubo, sizeof(ubo));
+}
+
+void Model::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const
+{
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelUBO), &m_ModelMatrix);
+
     m_VertexBuffer.BindAsVertexBuffer(commandBuffer);
     m_IndexBuffer.BindAsIndexBuffer(commandBuffer);
 
@@ -100,7 +156,7 @@ void Model::LoadModelFromFile(const std::string& filePath, std::vector<Vertex>& 
             indices.emplace_back(uniqueVertices[vertex]);
         }
     }
-    m_NrIndices = indices.size();
+    m_NrIndices = static_cast<uint32_t>(indices.size());
 }
 
 void Model::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
@@ -140,6 +196,24 @@ void Model::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue
     DataBuffer::CopyBuffer(queue, device, commandPool, stagingIBuffer, m_IndexBuffer, indexBufferSize);
 
     stagingIBuffer.Destroy(device);
+}
+
+void Model::InitUBOBuffers(VkDevice device, VkPhysicalDevice phyDevice)
+{
+    VkDeviceSize bufferSize{ sizeof(ModelUBO) };
+
+    m_ModelUBOs.resize(MAX_FRAMES_IN_FLIGHT);
+    m_ModelUBOsMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkBufferUsageFlags uniformBuffersUsage{ VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT };
+    VkMemoryPropertyFlags uniformBuffersProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+
+    for (size_t frameIdx{}; frameIdx < MAX_FRAMES_IN_FLIGHT; frameIdx++)
+    {
+        m_ModelUBOs[frameIdx].Initialize(device, phyDevice, uniformBuffersProperties, bufferSize, uniformBuffersUsage);
+        m_ModelUBOs[frameIdx].Map(device, bufferSize, &m_ModelUBOsMapped[frameIdx]);
+        UpdateUniformBuffers(static_cast<uint32_t>(frameIdx));
+    }
 }
 
 void Model::UpdateModelMatrix()

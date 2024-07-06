@@ -26,18 +26,22 @@ struct SwapChainSupportDetails
 	std::vector<VkPresentModeKHR> presentModes{};
 };
 
-struct UniformBufferObject
+struct CameraUBO
 {
-	alignas(16) glm::mat4 model{};
 	alignas(16) glm::mat4 view{};
 	alignas(16) glm::mat4 proj{};
+};
+
+struct ModelUBO
+{
+	alignas(16) glm::mat4 model{};
 };
 
 struct Transform
 {
 	glm::vec3 position{ 0.f };
 	glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
-	glm::vec3 scale{ 1.f };
+	glm::vec3 scale{ 1.f, 1.f, 1.f };
 
 	glm::mat4 GetModelMatrix() const
 	{

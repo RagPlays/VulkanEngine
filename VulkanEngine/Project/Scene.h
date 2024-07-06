@@ -21,7 +21,11 @@ public:
 	void Initialize(std::vector<Model>&& models);
 	void Destroy(VkDevice device);
 
-	void Draw(VkCommandBuffer commandBuffer, Camera* camera);
+	void UpdateBuffers(uint32_t currentFrame);
+	void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+
+	size_t GetNrOfModels() const;
+	const std::vector<Model>& GetModels() const;
 
 private:
 

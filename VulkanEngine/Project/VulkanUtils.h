@@ -20,4 +20,7 @@ const std::string g_Texture1Path{ "Resources/Models/viking_room.png" };
 const std::string g_Model2Path{ "Resources/Models/cube.obj" };
 const std::string g_Texture2Path{ "Resources/Models/viking_room.png" };
 
+const std::string g_Model3Path{ "Resources/Models/plane.obj" };
+const std::string g_Texture3Path{ "Resources/Models/viking_room.png" };
+
 #endif //!VULKANUTILS_H

@@ -18,10 +18,28 @@ void Scene::Destroy(VkDevice device)
 	}
 }
 
-void Scene::Draw(VkCommandBuffer commandBuffer, Camera* camera)
+void Scene::UpdateBuffers(uint32_t currentFrame)
 {
-	/*for (const auto& model : m_Models)
+	for (auto& model : m_Models)
 	{
-		model.Draw(commandBuffer, camera);
-	}*/
+		model.UpdateUniformBuffers(currentFrame);
+	}
+}
+
+void Scene::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
+{
+	for (const auto& model : m_Models)
+	{
+		model.Draw(commandBuffer, pipelineLayout, descriptorSet);
+	}
+}
+
+size_t Scene::GetNrOfModels() const
+{
+	return m_Models.size();
+}
+
+const std::vector<Model>& Scene::GetModels() const
+{
+	return m_Models;
 }

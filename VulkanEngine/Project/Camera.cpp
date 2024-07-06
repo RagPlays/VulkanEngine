@@ -12,7 +12,7 @@
 #include "Timer.h"
 
 Camera::Camera()
-    : m_Position{ glm::vec3{ 0.f, 0.f, 5.f } }
+    : m_Position{ glm::vec3{ 0.f, 2.f, 5.f } }
     , m_Front{ glm::vec3{ 0.f, 0.f, 1.f } }
     , m_Up{ glm::vec3{ 0.f, 1.f, 0.f } }
     , m_Right{ glm::vec3{ 1.f, 0.f, 0.f } }
@@ -36,7 +36,7 @@ void Camera::Initialize(VkDevice device, VkPhysicalDevice phyDevice, float aspec
 
     UpdateCameraVectors();
 
-    VkDeviceSize bufferSize{ sizeof(UniformBufferObject) };
+    VkDeviceSize bufferSize{ sizeof(CameraUBO) };
 
     m_UniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     m_UniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
@@ -127,13 +127,6 @@ void Camera::Update(uint32_t currentFrame)
     UpdateUniformBufferObjects(currentFrame);
 }
 
-void Camera::SetModelMatrix(const glm::mat4& modelMatrix)
-{
-    UniformBufferObject ubo{ modelMatrix, m_ViewMatrix, m_ProjectionMatrix };
-
-    memcpy(m_UniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
-}
-
 const std::vector<DataBuffer>& Camera::GetUniformBuffers() const
 {
     return m_UniformBuffers;
@@ -162,7 +155,7 @@ void Camera::UpdateCameraVectors()
 
 void Camera::UpdateUniformBufferObjects(uint32_t currentFrame)
 {
-    UniformBufferObject ubo{ glm::mat4{ 1.f }, m_ViewMatrix, m_ProjectionMatrix };
+    CameraUBO ubo{ m_ViewMatrix, m_ProjectionMatrix };
 
     memcpy(m_UniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }

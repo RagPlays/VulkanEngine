@@ -28,8 +28,6 @@ public:
 
     void Update(uint32_t currentFrame);
 
-    void SetModelMatrix(const glm::mat4& modelMatrix);
-
     const std::vector<DataBuffer>& GetUniformBuffers() const;
 
 private:

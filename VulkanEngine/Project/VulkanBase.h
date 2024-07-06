@@ -89,7 +89,8 @@ private:
 
 	// DescriptorPool
 	void CreateDescriptorPool();
-	void CreateDescriptorSets();
+	void AllocateDescriptorSets();
+	void UpdateDescriptorSets();
 
 	// Textures
 	void CreateTextureImage();
@@ -98,6 +99,9 @@ private:
 
 	// Scene
 	void CreateScene();
+
+	// UniformBufferObject
+	void UpdateUniformBuffers();
 
 	// Depth Buffer
 	void CreateDepthResources();
@@ -152,8 +156,8 @@ private:
 	uint32_t m_CurrentFrame{ 0 };
 
 	// Scene
-	//Scene m_Scene;
-	Model m_Model;
+	Scene m_Scene;
+	//Model m_Model;
 
 	// DescriptorPool
 	VkDescriptorPool m_DescriptorPool;

@@ -54,7 +54,9 @@ void VulkanBase::InitVulkan()
 	m_Camera.Initialize(m_Device, m_PhysicalDevice, g_AspectRatio, m_Window);
 
 	CreateDescriptorPool();
-	CreateDescriptorSets();
+
+	AllocateDescriptorSets();
+	UpdateDescriptorSets();
 
 	CreateCommandBuffer();
 
@@ -80,11 +82,11 @@ void VulkanBase::Cleanup()
 	m_TextureImageView.Destroy(m_Device);
 	m_TextureImage.Destroy();
 
-	//m_Scene.Destroy(m_Device);
-	m_Model.Destroy(m_Device);
+	m_Scene.Destroy(m_Device);
 
 	m_Camera.Destroy(m_Device);
 	
+	vkFreeDescriptorSets(m_Device, m_DescriptorPool, static_cast<uint32_t>(m_DescriptorSets.size()), m_DescriptorSets.data());
 	vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
 	vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
 	vkDestroyPipeline(m_Device, m_GraphicsPipeline, nullptr);
@@ -138,11 +140,11 @@ void VulkanBase::DrawFrame()
 	// Reset the fence for this frame
 	vkResetFences(m_Device, 1, &inFlightFence);
 
+	// Update Uniform Buffers
+	UpdateUniformBuffers();
+
 	// Record commands in the command buffer for this frame
 	RecordCommandBuffer(m_CommandBuffers[m_CurrentFrame], imageIndex);
-
-	// Update the camera (view and projection matrices) uniform buffer
-	m_Camera.Update(m_CurrentFrame);
 
 	// Submit the graphics command buffer
 	VkSemaphore waitSemaphores[]{ imageAvailableSemaphore };
@@ -585,12 +587,17 @@ void VulkanBase::CreateDescriptorSetLayout()
 
 void VulkanBase::CreateGraphicsPipelineLayout()
 {
+	VkPushConstantRange pushConstantRange{};
+	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // This should match your shader stage
+	pushConstantRange.offset = 0; // Offset in bytes within the push constant block
+	pushConstantRange.size = sizeof(ModelUBO); // Size in bytes of the push constant block
+
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &m_DescriptorSetLayout;
-	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+	pipelineLayoutInfo.pushConstantRangeCount = 1;
+	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
 	if (vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS)
 	{
@@ -806,9 +813,7 @@ void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t image
 
 		vkCmdSetScissor(cmndBffr, 0, 1, &scissor);
 
-		vkCmdBindDescriptorSets(cmndBffr, bindPoint, m_PipelineLayout, 0, 1, &m_DescriptorSets[m_CurrentFrame], 0, nullptr);
-
-		m_Model.Draw(cmndBffr, &m_Camera);
+		m_Scene.Draw(cmndBffr, m_PipelineLayout, m_DescriptorSets[m_CurrentFrame]);
 	}
 	commandBuffer.EndRenderPass();
 
@@ -817,18 +822,25 @@ void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t image
 
 void VulkanBase::CreateDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 2> poolSizes{};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	const size_t nrOfModels{ m_Scene.GetNrOfModels() };
+	const size_t totalDescriptorSets{ MAX_FRAMES_IN_FLIGHT * (nrOfModels + 1) }; // +1 for camera
 
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	std::array<VkDescriptorPoolSize, 3> poolSizes{};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Model Matrix glm::mat4
+	poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * nrOfModels);
+
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
+	poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
 	VkDescriptorPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolInfo.maxSets = static_cast<uint32_t>(totalDescriptorSets);
+	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 	if (vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
 	{
@@ -836,55 +848,94 @@ void VulkanBase::CreateDescriptorPool()
 	}
 }
 
-void VulkanBase::CreateDescriptorSets()
+void VulkanBase::AllocateDescriptorSets()
 {
-	std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_DescriptorSetLayout);
+	const size_t nrOfModels{ m_Scene.GetNrOfModels() };
+	const size_t totalDescriptorSets{ MAX_FRAMES_IN_FLIGHT * (nrOfModels + 1) }; // +1 for camera
+
+	std::vector<VkDescriptorSetLayout> layouts{ totalDescriptorSets, m_DescriptorSetLayout };
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = m_DescriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(totalDescriptorSets);
 	allocInfo.pSetLayouts = layouts.data();
 
-	m_DescriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+	m_DescriptorSets.resize(totalDescriptorSets);
 
 	if (vkAllocateDescriptorSets(m_Device, &allocInfo, m_DescriptorSets.data()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to allocate descriptor sets!");
 	}
+}
 
-	const std::vector<DataBuffer> cameraBuffers{ m_Camera.GetUniformBuffers() };
+void VulkanBase::UpdateDescriptorSets()
+{
+	const std::vector<Model>& models = m_Scene.GetModels();
+	const size_t nrOfModels = models.size();
+	const std::vector<DataBuffer> cameraBuffers = m_Camera.GetUniformBuffers();
 
-	for (size_t idx{}; idx < MAX_FRAMES_IN_FLIGHT; idx++)
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageInfo.imageView = m_TextureImageView.GetVkImageView();
+	imageInfo.sampler = m_TextureSampler.GetVkSampler();
+
+	for (size_t frameIdx = 0; frameIdx < MAX_FRAMES_IN_FLIGHT; ++frameIdx)
 	{
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = cameraBuffers[idx].GetVkBuffer();
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
+		// Update descriptor set for the camera
+		VkDescriptorBufferInfo cameraBufferInfo{};
+		cameraBufferInfo.buffer = cameraBuffers[frameIdx].GetVkBuffer();
+		cameraBufferInfo.offset = 0;
+		cameraBufferInfo.range = sizeof(CameraUBO);
 
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = m_TextureImageView.GetVkImageView();
-		imageInfo.sampler = m_TextureSampler.GetVkSampler();
+		VkWriteDescriptorSet cameraDescriptorWrite[2]{};
+		cameraDescriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		cameraDescriptorWrite[0].dstSet = m_DescriptorSets[frameIdx];
+		cameraDescriptorWrite[0].dstBinding = 0;
+		cameraDescriptorWrite[0].dstArrayElement = 0;
+		cameraDescriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		cameraDescriptorWrite[0].descriptorCount = 1;
+		cameraDescriptorWrite[0].pBufferInfo = &cameraBufferInfo;
 
-		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+		cameraDescriptorWrite[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		cameraDescriptorWrite[1].dstSet = m_DescriptorSets[frameIdx]; // +1 for camera
+		cameraDescriptorWrite[1].dstBinding = 1;
+		cameraDescriptorWrite[1].dstArrayElement = 0;
+		cameraDescriptorWrite[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		cameraDescriptorWrite[1].descriptorCount = 1;
+		cameraDescriptorWrite[1].pImageInfo = &imageInfo;
 
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = m_DescriptorSets[idx];
-		descriptorWrites[0].dstBinding = 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
+		vkUpdateDescriptorSets(m_Device, 2, cameraDescriptorWrite, 0, nullptr);
 
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = m_DescriptorSets[idx];
-		descriptorWrites[1].dstBinding = 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &imageInfo;
+		// Update descriptor sets for each model
+		for (size_t modelIdx{}; modelIdx < nrOfModels; ++modelIdx)
+		{
+			const std::vector<DataBuffer>& modelBuffers = models[modelIdx].GetBuffers();
 
-		vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+			VkDescriptorBufferInfo modelBufferInfo{};
+			modelBufferInfo.buffer = modelBuffers[frameIdx].GetVkBuffer();
+			modelBufferInfo.offset = 0;
+			modelBufferInfo.range = sizeof(ModelUBO);
+
+			VkWriteDescriptorSet descriptorWrites[2] = {};
+
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = m_DescriptorSets[frameIdx * nrOfModels + modelIdx + 1]; // +1 for camera
+			descriptorWrites[0].dstBinding = 0;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pBufferInfo = &modelBufferInfo;
+
+			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[1].dstSet = m_DescriptorSets[frameIdx * nrOfModels + modelIdx + 1]; // +1 for camera
+			descriptorWrites[1].dstBinding = 1;
+			descriptorWrites[1].dstArrayElement = 0;
+			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[1].descriptorCount = 1;
+			descriptorWrites[1].pImageInfo = &imageInfo;
+
+			vkUpdateDescriptorSets(m_Device, 2, descriptorWrites, 0, nullptr);
+		}
 	}
 }
 
@@ -940,24 +991,35 @@ void VulkanBase::CreateTextureSampler()
 
 void VulkanBase::CreateScene()
 {
-	/*std::vector<Model> models{};
+	std::vector<Model> models{};
 
 	Model model1{};
 	model1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
+	model1.SetPosition(glm::vec3{ -5.f, 1.f, 1.f });
 
-	Model model2{};
+	Model model2{}; // cube
 	model2.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model2.SetPosition(glm::vec3{ 5.f, 1.f, 1.f });
+	model2.SetScale(0.5f);
+
+	Model model3{}; // plane
+	model3.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3Path);
+	model3.SetScale(50.f);
 
 	models.emplace_back(std::move(model1));
 	models.emplace_back(std::move(model2));
+	models.emplace_back(std::move(model3));
 
-	m_Scene.Initialize(std::move(models));*/
+	m_Scene.Initialize(std::move(models));
+}
 
-	m_Model.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
+void VulkanBase::UpdateUniformBuffers()
+{
+	// Update the model (model matrices) uniform buffers
+	m_Scene.UpdateBuffers(m_CurrentFrame);
 
-	//m_Model.SetRotation(glm::quat{ 3.f, 60.f, 80.f, 3.f });
-	//m_Model.SetPosition(glm::vec3{ 10.f, 1.f, 1.f });
-	m_Model.SetScale(glm::vec3{ 0.8f, 1.0f, 0.5f });
+	// Update the camera (view and projection matrices) uniform buffer
+	m_Camera.Update(m_CurrentFrame);
 }
 
 void VulkanBase::CreateDepthResources()
