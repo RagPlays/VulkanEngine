@@ -38,6 +38,9 @@
 #include "Surface.h"
 #include "Camera.h"
 #include "Scene.h"
+#include "Texture.h"
+#include "Window.h"
+#include "GraphicsPipeline3D.h"
 
 class VulkanBase final
 {
@@ -50,14 +53,11 @@ public:
 
 private:
 
-	void InitWindow();
 	void InitVulkan();
 	void MainLoop();
 	void Cleanup();
 
 	void DrawFrame();
-
-	static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 
 	// Phicsical Devices
 	void PickPhysicalDevice();
@@ -77,10 +77,7 @@ private:
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	// Graphics Pipeline
-	void CreateDescriptorSetLayout();
-	void CreateGraphicsPipelineLayout();
-	void CreateGraphicsPipeline();
-	VkShaderModule CreateShaderModule(const std::vector<char>& code);
+	void CreateGraphicsPipeline3D();
 
 	// Command Pool
 	void CreateCommandPool();
@@ -92,9 +89,7 @@ private:
 	void AllocateDescriptorSets();
 	void UpdateDescriptorSets();
 
-	// Textures
-	void CreateTextureImage();
-	void CreateTextureImageView();
+	// TextureSampler
 	void CreateTextureSampler();
 
 	// Scene
@@ -111,8 +106,9 @@ private:
 
 private:
 
+
 	// Window
-	GLFWwindow* m_Window;
+	Window m_Window;
 
 	// Instances And Debug Messeges
 	VulkanInstance m_VulkanInstance;
@@ -137,9 +133,7 @@ private:
 	RenderPass m_RenderPass;
 
 	// Pipeline
-	VkPipeline m_GraphicsPipeline;
-	VkDescriptorSetLayout m_DescriptorSetLayout;
-	VkPipelineLayout m_PipelineLayout;
+	GraphicsPipeline3D m_GraphicsPipeline3D;
 
 	// Frame Buffers
 	std::vector<VkFramebuffer> m_SwapChainFramebuffers;
@@ -150,22 +144,19 @@ private:
 
 	// Sync Objects
 	SyncObjects m_SyncObjects;
-	bool m_FramebufferResized;
 
 	// Frames in flight
 	uint32_t m_CurrentFrame{ 0 };
 
 	// Scene
-	Scene m_Scene;
-	//Model m_Model;
+	Scene3D m_Scene;
 
 	// DescriptorPool
 	VkDescriptorPool m_DescriptorPool;
 	std::vector<VkDescriptorSet> m_DescriptorSets;
 
 	// Textures
-	Image m_TextureImage;
-	ImageView m_TextureImageView;
+	Texture m_Texture;
 	Sampler m_TextureSampler;
 
 	// Depth Buffer

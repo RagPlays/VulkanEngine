@@ -62,7 +62,13 @@ set(SOURCES
     "VulkanInstance.h"
     "VulkanInstance.cpp"
     "Surface.h"
-    "Surface.cpp")
+    "Surface.cpp"
+    "Texture.h"
+    "Texture.cpp"
+    "Window.h"
+    "Window.cpp"
+    
+     "GraphicsPipeline3D.h" "GraphicsPipeline3D.cpp")
 
 set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/Project/Resources")
 set(DESTINATION_DIR "${CMAKE_CURRENT_BINARY_DIR}")

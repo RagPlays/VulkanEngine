@@ -3,16 +3,11 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <Libraries/tiny_obj_loader.h>
 
-//#define GLM_FORCE_RADIANS
-//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-//#include <glm/glm.hpp>
-//#include <glm/gtc/matrix_transform.hpp>
-
 #include "Model.h"
 #include "VulkanUtils.h"
 #include "Camera.h"
 
-Model::Model()
+Model3D::Model3D()
     : m_ModelUBOs{}
     , m_ModelUBOsMapped{}
     , m_Transform{}
@@ -25,18 +20,18 @@ Model::Model()
     m_ModelUBOsMapped.clear();
 }
 
-void Model::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::string& filePath)
+void Model3D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::string& modelFilePath)
 {
     m_NrIndices = 0;
-    std::vector<Vertex> vertices{};
+    std::vector<Vertex3D> vertices{};
     std::vector<uint32_t> indices{};
 
-    LoadModelFromFile(filePath, vertices, indices);
+    LoadModelFromFile(modelFilePath, vertices, indices);
     InitDataBuffers(device, phyDevice, queue, commandPool, vertices, indices);
     InitUBOBuffers(device, phyDevice);
 }
 
-void Model::Destroy(VkDevice device)
+void Model3D::Destroy(VkDevice device)
 {
     m_VertexBuffer.Destroy(device);
     m_IndexBuffer.Destroy(device);
@@ -47,61 +42,43 @@ void Model::Destroy(VkDevice device)
     }
 }
 
-void Model::SetPosition(glm::vec3 position)
+void Model3D::SetPosition(glm::vec3 position)
 {
     m_Transform.position = position;
     UpdateModelMatrix();
 }
 
-void Model::SetRotation(glm::quat rotation)
+void Model3D::SetRotation(glm::quat rotation)
 {
     m_Transform.rotation = rotation;
     UpdateModelMatrix();
 }
 
-void Model::SetRotation(glm::vec3 rotation)
-{
-    //glm::quat rot{ glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f), rotation) };
-}
-
-void Model::SetScale(glm::vec3 scale)
+void Model3D::SetScale(glm::vec3 scale)
 {
     m_Transform.scale = scale;
     UpdateModelMatrix();
 }
 
-void Model::SetScale(float scale)
+void Model3D::SetScale(float scale)
 {
     SetScale(glm::vec3{ scale, scale, scale });
 }
 
-void Model::SetTranform(const Transform& transform)
+void Model3D::SetTranform(const Transform3D& transform)
 {
     m_Transform = transform;
     UpdateModelMatrix();
 }
 
-const glm::mat4& Model::GetModelMatrix() const
-{
-    return m_ModelMatrix;
-}
-
-const std::vector<DataBuffer>& Model::GetBuffers() const
+const std::vector<DataBuffer>& Model3D::GetBuffers() const
 {
     return m_ModelUBOs;
 }
 
-void Model::UpdateUniformBuffers(uint32_t currentFrame)
+void Model3D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t currentFrame) const
 {
-    ModelUBO ubo{};
-    ubo.model = m_ModelMatrix;
-
-    memcpy(m_ModelUBOsMapped[currentFrame], &ubo, sizeof(ubo));
-}
-
-void Model::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const
-{
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+    memcpy(m_ModelUBOsMapped[currentFrame], &m_ModelUBOs, sizeof(m_ModelUBOs));
 
     vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelUBO), &m_ModelMatrix);
 
@@ -111,7 +88,7 @@ void Model::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout,
     vkCmdDrawIndexed(commandBuffer, m_NrIndices, 1, 0, 0, 0);
 }
 
-void Model::LoadModelFromFile(const std::string& filePath, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+void Model3D::LoadModelFromFile(const std::string& filePath, std::vector<Vertex3D>& vertices, std::vector<uint32_t>& indices)
 {
     tinyobj::attrib_t attrib{};
     std::vector<tinyobj::shape_t> shapes{};
@@ -124,13 +101,13 @@ void Model::LoadModelFromFile(const std::string& filePath, std::vector<Vertex>& 
         throw std::runtime_error(warn + err);
     }
 
-    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+    std::unordered_map<Vertex3D, uint32_t> uniqueVertices{};
     for (const auto& shape : shapes)
     {
         for (const auto& index : shape.mesh.indices)
         {
             // Setting vertex
-            Vertex vertex{};
+            Vertex3D vertex{};
 
             vertex.pos =
             {
@@ -159,7 +136,7 @@ void Model::LoadModelFromFile(const std::string& filePath, std::vector<Vertex>& 
     m_NrIndices = static_cast<uint32_t>(indices.size());
 }
 
-void Model::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
+void Model3D::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices)
 {
     /////// Vertex Buffer ///////
     const VkDeviceSize vertexBufferSize{ sizeof(vertices[0]) * vertices.size() };
@@ -198,25 +175,24 @@ void Model::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue
     stagingIBuffer.Destroy(device);
 }
 
-void Model::InitUBOBuffers(VkDevice device, VkPhysicalDevice phyDevice)
+void Model3D::InitUBOBuffers(VkDevice device, VkPhysicalDevice phyDevice)
 {
     VkDeviceSize bufferSize{ sizeof(ModelUBO) };
 
-    m_ModelUBOs.resize(MAX_FRAMES_IN_FLIGHT);
-    m_ModelUBOsMapped.resize(MAX_FRAMES_IN_FLIGHT);
+    m_ModelUBOs.resize(g_MaxFramesInFlight);
+    m_ModelUBOsMapped.resize(g_MaxFramesInFlight);
 
     VkBufferUsageFlags uniformBuffersUsage{ VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT };
     VkMemoryPropertyFlags uniformBuffersProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
 
-    for (size_t frameIdx{}; frameIdx < MAX_FRAMES_IN_FLIGHT; frameIdx++)
+    for (size_t frameIdx{}; frameIdx < g_MaxFramesInFlight; frameIdx++)
     {
         m_ModelUBOs[frameIdx].Initialize(device, phyDevice, uniformBuffersProperties, bufferSize, uniformBuffersUsage);
         m_ModelUBOs[frameIdx].Map(device, bufferSize, &m_ModelUBOsMapped[frameIdx]);
-        UpdateUniformBuffers(static_cast<uint32_t>(frameIdx));
     }
 }
 
-void Model::UpdateModelMatrix()
+void Model3D::UpdateModelMatrix()
 {
-    m_ModelMatrix = m_Transform.GetModelMatrix();
+    m_ModelMatrix.model = m_Transform.GetModelMatrix();
 }

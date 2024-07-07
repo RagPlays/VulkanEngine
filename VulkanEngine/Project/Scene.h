@@ -10,26 +10,25 @@
 
 class Camera;
 
-class Scene final
+class Scene3D final
 {
 public:
 
-	Scene() = default;
-	~Scene() = default;
+	Scene3D() = default;
+	~Scene3D() = default;
 
 	void Initialize(const std::string& filePath);
-	void Initialize(std::vector<Model>&& models);
+	void Initialize(std::vector<Model3D>&& models);
 	void Destroy(VkDevice device);
 
-	void UpdateBuffers(uint32_t currentFrame);
-	void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+	void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t currentFrame) const;
 
 	size_t GetNrOfModels() const;
-	const std::vector<Model>& GetModels() const;
+	const std::vector<Model3D>& GetModels() const;
 
 private:
 
-	std::vector<Model> m_Models;
+	std::vector<Model3D> m_Models;
 
 };
 

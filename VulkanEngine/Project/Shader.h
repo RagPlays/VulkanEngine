@@ -6,29 +6,39 @@
 
 #include <vulkan/vulkan.h>
 
+struct ShaderConfig
+{
+    std::string filePath;
+    std::string entryPoint;
+    VkShaderStageFlagBits stage;
+};
+
 class Shader final
 {
 public:
 
-    explicit Shader(VkDevice device, const std::string& filePath, const std::string& entryPoint, VkShaderStageFlagBits stage);
-    ~Shader();
+    Shader();
+    ~Shader() = default;
+
+    void Initialize(VkDevice device, const std::string& filePath, const std::string& entryPoint, VkShaderStageFlagBits stage);
+    void Initialize(VkDevice device, const ShaderConfig& shaderConfig);
+    void Destroy(VkDevice device);
 
     VkPipelineShaderStageCreateInfo GetPipelineShaderStageInfo() const;
 
-    static VkPipelineVertexInputStateCreateInfo GetVertexInputStateInfo();
+    static VkPipelineVertexInputStateCreateInfo GetVertex3DInputStateInfo();
     static VkPipelineInputAssemblyStateCreateInfo GetInputAssemblyStateInfo();
 
 private:
 
-    VkShaderModule CreateShaderModule(const std::vector<char>& code) const;
+    VkShaderModule CreateShaderModule(VkDevice device, const std::vector<char>& code) const;
 
-    std::vector<char> ReadFile(const std::string& filename);
+    std::vector<char> ReadFile(const std::string& filename) const;
 
 private:
 
-    const std::string m_FilePath;
-    const std::string m_EntryPoint;
-    const VkDevice m_VkDevice;
+    std::string m_FilePath;
+    std::string m_EntryPoint;
     VkShaderModule m_VkShaderModule;
     VkShaderStageFlagBits m_ShaderStageFlag;
 

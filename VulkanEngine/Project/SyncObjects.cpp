@@ -4,9 +4,9 @@
 
 void SyncObjects::Initialize(VkDevice device)
 {
-	m_ImageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_RenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_InFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+	m_ImageAvailableSemaphores.resize(g_MaxFramesInFlight);
+	m_RenderFinishedSemaphores.resize(g_MaxFramesInFlight);
+	m_InFlightFences.resize(g_MaxFramesInFlight);
 
 	VkSemaphoreCreateInfo semaphoreInfo{};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -15,7 +15,7 @@ void SyncObjects::Initialize(VkDevice device)
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	for (int idx{}; idx < MAX_FRAMES_IN_FLIGHT; idx++)
+	for (int idx{}; idx < g_MaxFramesInFlight; idx++)
 	{
 		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphores[idx]) != VK_SUCCESS ||
 			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphores[idx]) != VK_SUCCESS ||

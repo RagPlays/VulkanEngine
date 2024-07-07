@@ -2,20 +2,35 @@
 #include "VulkanUtils.h"
 #include "VulkanStructs.h"
 
-Shader::Shader(VkDevice device, const std::string& filePath, const std::string& entryPoint, VkShaderStageFlagBits stage)
-    : m_FilePath{ filePath }
-    , m_EntryPoint{ entryPoint }
-    , m_VkDevice{ device }
+Shader::Shader()
+    : m_FilePath{}
+    , m_EntryPoint{}
     , m_VkShaderModule{ VK_NULL_HANDLE }
-    , m_ShaderStageFlag{ stage }
+    , m_ShaderStageFlag{}
 {
-    std::vector<char> code{ ReadFile(m_FilePath) };
-    m_VkShaderModule = CreateShaderModule(code);
 }
 
-Shader::~Shader()
+void Shader::Initialize(VkDevice device, const std::string& filePath, const std::string& entryPoint, VkShaderStageFlagBits stage)
 {
-    vkDestroyShaderModule(m_VkDevice, m_VkShaderModule, nullptr);
+    m_FilePath = filePath;
+    m_EntryPoint = entryPoint;
+    m_ShaderStageFlag = stage;
+    std::vector<char> code{ ReadFile(m_FilePath) };
+    m_VkShaderModule = CreateShaderModule(device, code);
+}
+
+void Shader::Initialize(VkDevice device, const ShaderConfig& shaderConfig)
+{
+    m_FilePath = shaderConfig.filePath;
+    m_EntryPoint = shaderConfig.entryPoint;
+    m_ShaderStageFlag = shaderConfig.stage;
+    std::vector<char> code{ ReadFile(m_FilePath) };
+    m_VkShaderModule = CreateShaderModule(device, code);
+}
+
+void Shader::Destroy(VkDevice device)
+{
+    vkDestroyShaderModule(device, m_VkShaderModule, nullptr);
 }
 
 VkPipelineShaderStageCreateInfo Shader::GetPipelineShaderStageInfo() const
@@ -29,10 +44,10 @@ VkPipelineShaderStageCreateInfo Shader::GetPipelineShaderStageInfo() const
     return shaderStageInfo;
 }
 
-VkPipelineVertexInputStateCreateInfo Shader::GetVertexInputStateInfo()
+VkPipelineVertexInputStateCreateInfo Shader::GetVertex3DInputStateInfo()
 {
-    auto bindingDescription{ new VkVertexInputBindingDescription{ Vertex::GetBindingDescription() } };
-    auto attributeDescriptions{ new std::array<VkVertexInputAttributeDescription, 3>{ Vertex::GetAttributeDescriptions() } };
+    auto bindingDescription{ new VkVertexInputBindingDescription{ Vertex3D::GetBindingDescription() } };
+    auto attributeDescriptions{ new std::array<VkVertexInputAttributeDescription, 3>{ Vertex3D::GetAttributeDescriptions() } };
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -54,15 +69,15 @@ VkPipelineInputAssemblyStateCreateInfo Shader::GetInputAssemblyStateInfo()
     return inputAssembly;
 }
 
-VkShaderModule Shader::CreateShaderModule(const std::vector<char>& code) const
+VkShaderModule Shader::CreateShaderModule(VkDevice device, const std::vector<char>& code) const
 {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(m_VkDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+    VkShaderModule shaderModule{};
+    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create shader module!");
     }
@@ -70,7 +85,7 @@ VkShaderModule Shader::CreateShaderModule(const std::vector<char>& code) const
     return shaderModule;
 }
 
-std::vector<char> Shader::ReadFile(const std::string& filename)
+std::vector<char> Shader::ReadFile(const std::string& filename) const
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 

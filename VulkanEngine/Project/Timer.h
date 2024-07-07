@@ -17,6 +17,7 @@ public:
 	Timer& operator=(Timer&& other) noexcept = delete;
 
 	void Update();
+	void UpdateFPSPrint() const;
 
 	float GetElapsedSec() const;
 	float GetFPS() const;
@@ -28,6 +29,7 @@ private:
 
 private:
 
+	const bool m_PrintFPS;
 	float m_ElapsedSec;
 
 	std::chrono::high_resolution_clock::time_point m_LastTime;

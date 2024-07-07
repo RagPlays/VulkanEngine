@@ -6,8 +6,7 @@
 #include "DataBuffer.h"
 
 Image::Image()
-    : m_VkDevice{ VK_NULL_HANDLE }
-    , m_Width{}
+    : m_Width{}
     , m_Heigth{}
     , m_VkImage{ VK_NULL_HANDLE }
     , m_VkImageMemory{ VK_NULL_HANDLE }
@@ -16,7 +15,6 @@ Image::Image()
 
 void Image::Initialize(VkDevice device, VkPhysicalDevice phyDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags prop)
 {
-    m_VkDevice = device;
     m_Width = width;
     m_Heigth = height;
 
@@ -57,18 +55,18 @@ void Image::Initialize(VkDevice device, VkPhysicalDevice phyDevice, uint32_t wid
     vkBindImageMemory(device, m_VkImage, m_VkImageMemory, 0);
 }
 
-void Image::Destroy()
+void Image::Destroy(VkDevice device)
 {
-    if (m_VkDevice == VK_NULL_HANDLE) return;
-    if (m_VkImage != VK_NULL_HANDLE) vkDestroyImage(m_VkDevice, m_VkImage, nullptr);
-    if (m_VkImageMemory != VK_NULL_HANDLE) vkFreeMemory(m_VkDevice, m_VkImageMemory, nullptr);
+    if (device == VK_NULL_HANDLE) return;
+    if (m_VkImage != VK_NULL_HANDLE) vkDestroyImage(device, m_VkImage, nullptr);
+    if (m_VkImageMemory != VK_NULL_HANDLE) vkFreeMemory(device, m_VkImageMemory, nullptr);
     m_VkImage = VK_NULL_HANDLE;
     m_VkImageMemory = VK_NULL_HANDLE;
 }
 
-void Image::TransitionImageLayout(const CommandPool& commandPool, VkQueue queue, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+void Image::TransitionImageLayout(VkDevice device, const CommandPool& commandPool, VkQueue queue, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-    CommandBuffer commandBuffer{ commandPool.CreateCommandBuffer(m_VkDevice) };
+    CommandBuffer commandBuffer{ commandPool.CreateCommandBuffer(device) };
     commandBuffer.BeginRecording();
 
     VkImageMemoryBarrier barrier{};
@@ -144,12 +142,12 @@ void Image::TransitionImageLayout(const CommandPool& commandPool, VkQueue queue,
     commandBuffer.EndRecording();
 
     commandBuffer.Submit(queue, VK_NULL_HANDLE);
-    commandBuffer.Destroy(m_VkDevice, commandPool);
+    commandBuffer.Destroy(device, commandPool);
 }
 
-void Image::CopyBufferToImage(const DataBuffer& buffer, const CommandPool& commandPool, VkQueue queue)
+void Image::CopyBufferToImage(VkDevice device, const DataBuffer& buffer, const CommandPool& commandPool, VkQueue queue)
 {
-    CommandBuffer commandBuffer{ commandPool.CreateCommandBuffer(m_VkDevice) };
+    CommandBuffer commandBuffer{ commandPool.CreateCommandBuffer(device) };
     commandBuffer.BeginRecording();
     {
         VkBufferImageCopy region{};
@@ -182,7 +180,7 @@ void Image::CopyBufferToImage(const DataBuffer& buffer, const CommandPool& comma
     commandBuffer.EndRecording();
 
     commandBuffer.Submit(queue, VK_NULL_HANDLE);
-    commandBuffer.Destroy(m_VkDevice, commandPool);
+    commandBuffer.Destroy(device, commandPool);
 }
 
 bool Image::HasStencilComponent(VkFormat format)

@@ -38,13 +38,13 @@ void Camera::Initialize(VkDevice device, VkPhysicalDevice phyDevice, float aspec
 
     VkDeviceSize bufferSize{ sizeof(CameraUBO) };
 
-    m_UniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-    m_UniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+    m_UniformBuffers.resize(g_MaxFramesInFlight);
+    m_UniformBuffersMapped.resize(g_MaxFramesInFlight);
 
     VkBufferUsageFlags uniformBuffersUsage{ VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT };
     VkMemoryPropertyFlags uniformBuffersProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
 
-    for (size_t idx{}; idx < MAX_FRAMES_IN_FLIGHT; idx++)
+    for (size_t idx{}; idx < g_MaxFramesInFlight; idx++)
     {
         m_UniformBuffers[idx].Initialize(device, phyDevice, uniformBuffersProperties, bufferSize, uniformBuffersUsage);
         m_UniformBuffers[idx].Map(device, bufferSize, &m_UniformBuffersMapped[idx]);
