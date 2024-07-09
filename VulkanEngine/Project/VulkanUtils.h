@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
-const int g_MaxFramesInFlight{ 1 };
+const int g_MaxFramesInFlight{ 2 };
 
 const std::string g_Model1Path{ "Resources/Models/viking_room.obj" };
 const std::string g_Texture1Path{ "Resources/Models/viking_room.png" };

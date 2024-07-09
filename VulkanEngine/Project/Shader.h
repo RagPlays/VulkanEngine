@@ -13,6 +13,12 @@ struct ShaderConfig
     VkShaderStageFlagBits stage;
 };
 
+struct ShadersConfigs
+{
+    ShaderConfig vertShaderConfig{};
+    ShaderConfig fragShaderConfig{};
+};
+
 class Shader final
 {
 public:
@@ -26,6 +32,7 @@ public:
 
     VkPipelineShaderStageCreateInfo GetPipelineShaderStageInfo() const;
 
+    static VkPipelineVertexInputStateCreateInfo GetVertex2DInputStateInfo();
     static VkPipelineVertexInputStateCreateInfo GetVertex3DInputStateInfo();
     static VkPipelineInputAssemblyStateCreateInfo GetInputAssemblyStateInfo();
 

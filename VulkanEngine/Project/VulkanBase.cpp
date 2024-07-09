@@ -2,14 +2,14 @@
 
 #include "Timer.h"
 
-void VulkanBase::Run()
+void Application::Run()
 {
 	InitVulkan();
 	MainLoop();
 	Cleanup();
 }
 
-void VulkanBase::InitVulkan()
+void Application::InitVulkan()
 {
 	m_Window.Initialize();
 
@@ -46,7 +46,7 @@ void VulkanBase::InitVulkan()
 	m_SyncObjects.Initialize(m_Device);
 }
 
-void VulkanBase::MainLoop()
+void Application::MainLoop()
 {
 	while (!m_Window.WindowShouldClose())
 	{
@@ -57,7 +57,7 @@ void VulkanBase::MainLoop()
 	vkDeviceWaitIdle(m_Device);
 }
 
-void VulkanBase::Cleanup()
+void Application::Cleanup()
 {
 	CleanupSwapChain();
 
@@ -88,7 +88,7 @@ void VulkanBase::Cleanup()
 	m_Window.Destroy();
 }
 
-void VulkanBase::DrawFrame()
+void Application::DrawFrame()
 {
 	// Get Sync Objects
 	const VkFence& inFlightFence{ m_SyncObjects.GetInFlightFence(m_CurrentFrame) };
@@ -169,7 +169,7 @@ void VulkanBase::DrawFrame()
 	m_CurrentFrame = (m_CurrentFrame + 1) % g_MaxFramesInFlight;
 }
 
-void VulkanBase::PickPhysicalDevice()
+void Application::PickPhysicalDevice()
 {
 	uint32_t deviceCount{ 0 };
 	vkEnumeratePhysicalDevices(m_VulkanInstance.GetVkInstance(), &deviceCount, nullptr);
@@ -198,7 +198,7 @@ void VulkanBase::PickPhysicalDevice()
 	if (m_PhysicalDevice == VK_NULL_HANDLE) throw std::runtime_error("failed to find a suitable GPU!");
 }
 
-void VulkanBase::CreateLogicDevice()
+void Application::CreateLogicDevice()
 {
 	QueueFamilyIndices indices{ FindQueueFamilies(m_PhysicalDevice) };
 
@@ -254,7 +254,7 @@ void VulkanBase::CreateLogicDevice()
 	vkGetDeviceQueue(m_Device, indices.presentFamily.value(), 0, &m_PresentQueue);
 }
 
-bool VulkanBase::IsDeviceSuitable(VkPhysicalDevice device)
+bool Application::IsDeviceSuitable(VkPhysicalDevice device)
 {
 	QueueFamilyIndices indices{ FindQueueFamilies(device) };
 	bool extensionsSupported{ VulkanInstance::CheckDeviceExtensionSupport(device) };
@@ -270,7 +270,7 @@ bool VulkanBase::IsDeviceSuitable(VkPhysicalDevice device)
 	return indices.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-QueueFamilyIndices VulkanBase::FindQueueFamilies(VkPhysicalDevice device)
+QueueFamilyIndices Application::FindQueueFamilies(VkPhysicalDevice device)
 {
 	QueueFamilyIndices indices{};
 
@@ -304,7 +304,7 @@ QueueFamilyIndices VulkanBase::FindQueueFamilies(VkPhysicalDevice device)
 	return indices;
 }
 
-void VulkanBase::CreateSwapChain()
+void Application::CreateSwapChain()
 {
 	SwapChainSupportDetails swapChainSupport{ QuerySwapChainSupport(m_PhysicalDevice) };
 
@@ -366,7 +366,7 @@ void VulkanBase::CreateSwapChain()
 	m_SwapChainExtent = extent; // chosen resution of swap chain (width, height)
 }
 
-void VulkanBase::RecreateSwapChain()
+void Application::RecreateSwapChain()
 {
 	// Window minimization handling //
 	int width{};
@@ -389,7 +389,7 @@ void VulkanBase::RecreateSwapChain()
 	CreateFramebuffers();
 }
 
-void VulkanBase::CreateSwapChainImageViews()
+void Application::CreateSwapChainImageViews()
 {
 	m_SwapChainImageViews.resize(m_SwapChainImages.size());
 	for (size_t idx{}; idx < m_SwapChainImages.size(); ++idx)
@@ -400,7 +400,7 @@ void VulkanBase::CreateSwapChainImageViews()
 	}
 }
 
-void VulkanBase::CreateFramebuffers()
+void Application::CreateFramebuffers()
 {
 	m_SwapChainFramebuffers.resize(m_SwapChainImageViews.size());
 
@@ -428,7 +428,7 @@ void VulkanBase::CreateFramebuffers()
 	}
 }
 
-void VulkanBase::CleanupSwapChain()
+void Application::CleanupSwapChain()
 {
 	m_DepthImage.Destroy(m_Device);
 	m_DepthImageView.Destroy(m_Device);
@@ -446,7 +446,7 @@ void VulkanBase::CleanupSwapChain()
 	vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
 }
 
-SwapChainSupportDetails VulkanBase::QuerySwapChainSupport(VkPhysicalDevice device)
+SwapChainSupportDetails Application::QuerySwapChainSupport(VkPhysicalDevice device)
 {
 	const VkSurfaceKHR surface{ m_Surface.GetVkSurface() };
 
@@ -474,7 +474,7 @@ SwapChainSupportDetails VulkanBase::QuerySwapChainSupport(VkPhysicalDevice devic
 	return details;
 }
 
-VkSurfaceFormatKHR VulkanBase::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+VkSurfaceFormatKHR Application::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
 {
 	for (const auto& availableFormat : availableFormats)
 	{
@@ -486,7 +486,7 @@ VkSurfaceFormatKHR VulkanBase::ChooseSwapSurfaceFormat(const std::vector<VkSurfa
 	return availableFormats[0];
 }
 
-VkPresentModeKHR VulkanBase::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+VkPresentModeKHR Application::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
 {
 	// VK_PRESENT_MODE_IMMEDIATE_KHR // Can have screen tearing
 	// VK_PRESENT_MODE_FIFO_KHR // More like VSync
@@ -503,7 +503,7 @@ VkPresentModeKHR VulkanBase::ChooseSwapPresentMode(const std::vector<VkPresentMo
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D VulkanBase::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+VkExtent2D Application::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 {
 	// Swap extent is the resolution of the swap chain images //
 
@@ -530,7 +530,7 @@ VkExtent2D VulkanBase::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
 	}
 }
 
-void VulkanBase::CreateGraphicsPipeline3D()
+void Application::CreateGraphicsPipeline3D()
 {
 	const ShaderConfig vertShaderConfig
 	{
@@ -546,16 +546,20 @@ void VulkanBase::CreateGraphicsPipeline3D()
 		VK_SHADER_STAGE_FRAGMENT_BIT
 	};
 
-	m_GraphicsPipeline3D.Initialize(m_Device, vertShaderConfig, fragShaderConfig, m_SwapChainExtent, m_RenderPass.GetVkRenderPass());
+	const ShadersConfigs shaderConfigs{ vertShaderConfig, fragShaderConfig };
+
+	const VkRenderPass& renderPass{ m_RenderPass.GetVkRenderPass() };
+
+	m_GraphicsPipeline3D.Initialize(m_Device, shaderConfigs, m_SwapChainExtent, renderPass);
 }
 
-void VulkanBase::CreateCommandPool()
+void Application::CreateCommandPool()
 {
 	QueueFamilyIndices queueFamilyIndices{ FindQueueFamilies(m_PhysicalDevice) };
 	m_CommandPool.Initialize(m_Device, queueFamilyIndices);
 }
 
-void VulkanBase::CreateCommandBuffer()
+void Application::CreateCommandBuffer()
 {
 	m_CommandBuffers.resize(g_MaxFramesInFlight);
 
@@ -565,7 +569,7 @@ void VulkanBase::CreateCommandBuffer()
 	}
 }
 
-void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex)
+void Application::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex)
 {
 	constexpr VkPipelineBindPoint bindPoint{ VK_PIPELINE_BIND_POINT_GRAPHICS };
 
@@ -606,33 +610,27 @@ void VulkanBase::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t image
 
 		vkCmdSetScissor(cmndBffr, 0, 1, &scissor);
 
-		m_GraphicsPipeline3D.Draw(cmndBffr, m_DescriptorSets[m_CurrentFrame], m_CurrentFrame);
+		m_GraphicsPipeline3D.Draw(cmndBffr, m_DescriptorSets[m_CurrentFrame]);
 	}
 	commandBuffer.EndRenderPass();
 
 	commandBuffer.EndRecording();
 }
 
-void VulkanBase::CreateDescriptorPool()
+void Application::CreateDescriptorPool()
 {
-	const size_t nrOfModels{ m_GraphicsPipeline3D.GetNrOfModels() };
-	const size_t totalDescriptorSets{ g_MaxFramesInFlight * (nrOfModels + 1) }; // +1 for camera
+	std::array<VkDescriptorPoolSize, 2> poolSizes{};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
+	poolSizes[0].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
 
-	std::array<VkDescriptorPoolSize, 3> poolSizes{};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Model Matrix glm::mat4
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight * nrOfModels);
-
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
-
-	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
-	poolSizes[2].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
 
 	VkDescriptorPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(totalDescriptorSets);
+	poolInfo.maxSets = static_cast<uint32_t>(g_MaxFramesInFlight);
 	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 	if (vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
@@ -641,19 +639,16 @@ void VulkanBase::CreateDescriptorPool()
 	}
 }
 
-void VulkanBase::AllocateDescriptorSets()
+void Application::AllocateDescriptorSets()
 {
-	const size_t nrOfModels{ m_GraphicsPipeline3D.GetNrOfModels() };
-	const size_t totalDescriptorSets{ g_MaxFramesInFlight * (nrOfModels + 1) }; // +1 for camera
-
-	std::vector<VkDescriptorSetLayout> layouts{ totalDescriptorSets, m_GraphicsPipeline3D.GetDescriptorSetLayout() };
+	std::vector<VkDescriptorSetLayout> layouts{ g_MaxFramesInFlight, m_GraphicsPipeline3D.GetDescriptorSetLayout() };
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = m_DescriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(totalDescriptorSets);
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
 	allocInfo.pSetLayouts = layouts.data();
 
-	m_DescriptorSets.resize(totalDescriptorSets);
+	m_DescriptorSets.resize(layouts.size());
 
 	if (vkAllocateDescriptorSets(m_Device, &allocInfo, m_DescriptorSets.data()) != VK_SUCCESS)
 	{
@@ -661,11 +656,9 @@ void VulkanBase::AllocateDescriptorSets()
 	}
 }
 
-void VulkanBase::UpdateDescriptorSets()
+void Application::UpdateDescriptorSets()
 {
-	const std::vector<Model3D>& models{ m_Scene.GetModels() };
-	const size_t nrOfModels{ models.size() };
-	const std::vector<DataBuffer> cameraBuffers{ m_Camera.GetUniformBuffers() };
+	const std::vector<DataBuffer>& cameraBuffers{ m_Camera.GetUniformBuffers() };
 
 	VkDescriptorImageInfo imageInfo{};
 	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -674,111 +667,87 @@ void VulkanBase::UpdateDescriptorSets()
 
 	for (size_t frameIdx{}; frameIdx < g_MaxFramesInFlight; ++frameIdx)
 	{
-		// Update descriptor set for the camera
 		VkDescriptorBufferInfo cameraBufferInfo{};
 		cameraBufferInfo.buffer = cameraBuffers[frameIdx].GetVkBuffer();
 		cameraBufferInfo.offset = 0;
 		cameraBufferInfo.range = sizeof(CameraUBO);
 
-		VkWriteDescriptorSet cameraDescriptorWrite[2]{};
-		cameraDescriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		cameraDescriptorWrite[0].dstSet = m_DescriptorSets[frameIdx];
-		cameraDescriptorWrite[0].dstBinding = 0;
-		cameraDescriptorWrite[0].dstArrayElement = 0;
-		cameraDescriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		cameraDescriptorWrite[0].descriptorCount = 1;
-		cameraDescriptorWrite[0].pBufferInfo = &cameraBufferInfo;
+		std::array<VkWriteDescriptorSet, 2>descriptorWrites{};
 
-		cameraDescriptorWrite[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		cameraDescriptorWrite[1].dstSet = m_DescriptorSets[frameIdx];
-		cameraDescriptorWrite[1].dstBinding = 1;
-		cameraDescriptorWrite[1].dstArrayElement = 0;
-		cameraDescriptorWrite[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		cameraDescriptorWrite[1].descriptorCount = 1;
-		cameraDescriptorWrite[1].pImageInfo = &imageInfo;
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = m_DescriptorSets[frameIdx];
+		descriptorWrites[1].dstBinding = 0;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pBufferInfo = &cameraBufferInfo;
 
-		vkUpdateDescriptorSets(m_Device, 2, cameraDescriptorWrite, 0, nullptr);
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = m_DescriptorSets[frameIdx];
+		descriptorWrites[0].dstBinding = 1;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pImageInfo = &imageInfo;
 
-		// Update descriptor sets for each model
-		for (size_t modelIdx{}; modelIdx < nrOfModels; ++modelIdx)
-		{
-			const std::vector<DataBuffer>& modelBuffers{ models[modelIdx].GetBuffers() };
-
-			VkDescriptorBufferInfo modelBufferInfo{};
-			modelBufferInfo.buffer = modelBuffers[frameIdx].GetVkBuffer();
-			modelBufferInfo.offset = 0;
-			modelBufferInfo.range = sizeof(ModelUBO);
-
-			VkWriteDescriptorSet descriptorWrites{};
-			descriptorWrites.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites.dstSet = m_DescriptorSets[frameIdx * nrOfModels + modelIdx + 1]; // +1 for camera
-			descriptorWrites.dstBinding = 0;
-			descriptorWrites.dstArrayElement = 0;
-			descriptorWrites.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites.descriptorCount = 1;
-			descriptorWrites.pBufferInfo = &modelBufferInfo;
-
-			vkUpdateDescriptorSets(m_Device, 1, &descriptorWrites, 0, nullptr);
-		}
+		vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 }
 
-void VulkanBase::CreateTextureSampler()
+void Application::CreateTextureSampler()
 {
 	m_TextureSampler.Initialize(m_Device, m_PhysicalDevice);
 }
 
-void VulkanBase::CreateScene()
+void Application::CreateScene()
 {
-	//std::vector<Model3D> models{};
+	std::vector<Model3D> models{};
 
-	//Model3D model1{};
-	//model1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
-	//model1.SetPosition(glm::vec3{ -5.f, 0.5f, 0.f });
+	Model3D model1{};
+	model1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
+	model1.SetPosition(glm::vec3{ -5.f, 0.5f, 0.f });
 
-	//Model3D model2{}; // plane
-	//model2.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3Path);
-	//model2.SetScale(50.f);
+	Model3D model2{}; // plane
+	model2.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3Path);
+	model2.SetScale(50.f);
 
-	//Model3D model3{}; // cube
-	//model3.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
-	//model3.SetPosition(glm::vec3{ 2.f, 2.f, 2.f });
-	//model3.SetScale(0.5f);
+	Model3D model3{}; // cube
+	model3.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model3.SetPosition(glm::vec3{ 2.f, 2.f, 2.f });
+	model3.SetScale(0.5f);
 
-	//Model3D model4{}; // cube
-	//model4.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
-	//model4.SetPosition(glm::vec3{ -2.f, 2.f, 2.f });
-	//model4.SetScale(0.5f);
+	Model3D model4{}; // cube
+	model4.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model4.SetPosition(glm::vec3{ -2.f, 2.f, 2.f });
+	model4.SetScale(0.5f);
 
-	//Model3D model5{}; // cube
-	//model5.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
-	//model5.SetPosition(glm::vec3{ 2.f, 2.f, -2.f });
-	//model5.SetScale(0.5f);
+	Model3D model5{}; // cube
+	model5.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model5.SetPosition(glm::vec3{ 2.f, 2.f, -2.f });
+	model5.SetScale(0.5f);
 
-	//Model3D model6{}; // cube
-	//model6.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
-	//model6.SetPosition(glm::vec3{ -2.f, 2.f, -2.f });
-	//model6.SetScale(0.5f);
+	Model3D model6{}; // cube
+	model6.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model6.SetPosition(glm::vec3{ -2.f, 2.f, -2.f });
+	model6.SetScale(0.5f);
 
-	//models.emplace_back(std::move(model1));
-	//models.emplace_back(std::move(model2));
-	//models.emplace_back(std::move(model3));
-	//models.emplace_back(std::move(model4));
-	//models.emplace_back(std::move(model5));
-	//models.emplace_back(std::move(model6));
+	models.emplace_back(std::move(model1));
+	models.emplace_back(std::move(model2));
+	models.emplace_back(std::move(model3));
+	models.emplace_back(std::move(model4));
+	models.emplace_back(std::move(model5));
+	models.emplace_back(std::move(model6));
 
-	//m_Scene.Initialize(std::move(models));
-
-	m_GraphicsPipeline3D.InitScene(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool);
+	m_GraphicsPipeline3D.SetScene(std::move(models));
 }
 
-void VulkanBase::UpdateUniformBuffers()
+void Application::UpdateUniformBuffers()
 {
 	// Update the camera (view and projection matrices) uniform buffer
 	m_Camera.Update(m_CurrentFrame);
 }
 
-void VulkanBase::CreateDepthResources()
+void Application::CreateDepthResources()
 {
 	VkFormat depthFormat{ FindDepthFormat() };
 
@@ -788,7 +757,7 @@ void VulkanBase::CreateDepthResources()
 	m_DepthImage.TransitionImageLayout(m_Device, m_CommandPool, m_GraphicsQueue, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-VkFormat VulkanBase::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+VkFormat Application::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
 	for (VkFormat format : candidates)
 	{
@@ -802,7 +771,7 @@ VkFormat VulkanBase::FindSupportedFormat(const std::vector<VkFormat>& candidates
 	throw std::runtime_error("failed to find supported format!");
 }
 
-VkFormat VulkanBase::FindDepthFormat()
+VkFormat Application::FindDepthFormat()
 {
 	return FindSupportedFormat(
 		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
@@ -811,7 +780,7 @@ VkFormat VulkanBase::FindDepthFormat()
 	);
 }
 
-bool VulkanBase::HasStencilComponent(VkFormat format)
+bool Application::HasStencilComponent(VkFormat format)
 {
 	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }

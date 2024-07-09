@@ -6,8 +6,7 @@
 
 int main()
 {
-	VulkanBase vulkanApplication{};
-
+	Application vulkanApplication{};
     try
     {
         vulkanApplication.Run();

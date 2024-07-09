@@ -20,6 +20,11 @@ public:
 	Window();
 	~Window() = default;
 
+	Window(const Window& other) = delete;
+	Window(Window&& other) noexcept = delete;
+	Window& operator=(const Window& other) = delete;
+	Window& operator=(Window&& other) noexcept = delete;
+
 	void Initialize();
 	void Destroy();
 

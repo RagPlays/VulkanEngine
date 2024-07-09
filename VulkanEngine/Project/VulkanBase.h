@@ -42,12 +42,12 @@
 #include "Window.h"
 #include "GraphicsPipeline3D.h"
 
-class VulkanBase final
+class Application final
 {
 public:
 
-	VulkanBase() = default;
-	~VulkanBase() = default;
+	Application() = default;
+	~Application() = default;
 
 	void Run();
 

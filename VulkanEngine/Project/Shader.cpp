@@ -1,6 +1,6 @@
 #include "Shader.h"
 #include "VulkanUtils.h"
-#include "VulkanStructs.h"
+#include "Vertex.h"
 
 Shader::Shader()
     : m_FilePath{}
@@ -42,6 +42,20 @@ VkPipelineShaderStageCreateInfo Shader::GetPipelineShaderStageInfo() const
     shaderStageInfo.pName = m_EntryPoint.c_str();
 
     return shaderStageInfo;
+}
+
+VkPipelineVertexInputStateCreateInfo Shader::GetVertex2DInputStateInfo()
+{
+    auto bindingDescription{ new VkVertexInputBindingDescription{ Vertex2D::GetBindingDescription() } };
+    auto attributeDescriptions{ new std::array<VkVertexInputAttributeDescription, 2>{ Vertex2D::GetAttributeDescriptions() } };
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions->size());
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions->data();
+    return vertexInputInfo;
 }
 
 VkPipelineVertexInputStateCreateInfo Shader::GetVertex3DInputStateInfo()

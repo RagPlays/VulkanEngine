@@ -5,20 +5,35 @@
 #include "Shader.h"
 #include "VulkanUtils.h"
 
-void GraphicsPipeline3D::Initialize(VkDevice device, const ShaderConfig& vertSConf, const ShaderConfig& fragSConf, const VkExtent2D& swapchainExtent, VkRenderPass renderPass)
+void GraphicsPipeline3D::Initialize(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass)
 {
 	CreateDescriptorSetLayout(device);
 	CreatePipelineLayout(device);
-	CreatePipeline(device, vertSConf, fragSConf, swapchainExtent, renderPass);
+	CreatePipeline(device, shaderConfigs, swapchainExtent, renderPass);
 }
 
-void GraphicsPipeline3D::Draw(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet, uint32_t currentFrame) const
+void GraphicsPipeline3D::Destroy(VkDevice device)
+{
+	vkDestroyDescriptorSetLayout(device, m_VkDescriptorSetLayout, nullptr);
+
+	m_Scene.Destroy(device);
+
+	vkDestroyPipeline(device, m_VkPipeline, nullptr);
+	vkDestroyPipelineLayout(device, m_VkPipelineLayout, nullptr);
+}
+
+void GraphicsPipeline3D::Draw(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet) const
 {
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipeline);
 
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
-	m_Scene.Draw(commandBuffer, m_VkPipelineLayout, currentFrame);
+	m_Scene.Draw(commandBuffer, m_VkPipelineLayout);
+}
+
+void GraphicsPipeline3D::SetScene(std::vector<Model3D>&& models)
+{
+	m_Scene.Initialize(std::move(models));
 }
 
 size_t GraphicsPipeline3D::GetNrOfModels() const
@@ -64,7 +79,7 @@ void GraphicsPipeline3D::CreatePipelineLayout(VkDevice device)
 	VkPushConstantRange pushConstantRange{};
 	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	pushConstantRange.offset = 0;
-	pushConstantRange.size = sizeof(ModelUBO);
+	pushConstantRange.size = sizeof(Model3DUBO);
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -79,12 +94,12 @@ void GraphicsPipeline3D::CreatePipelineLayout(VkDevice device)
 	}
 }
 
-void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShaderConfig& vertSConf, const ShaderConfig& fragSConf, const VkExtent2D& swapchainExtent, VkRenderPass renderPass)
+void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass)
 {
 	Shader vertShader{};
 	Shader fragShader{};
-	vertShader.Initialize(device, vertSConf);
-	fragShader.Initialize(device, fragSConf);
+	vertShader.Initialize(device, shaderConfigs.vertShaderConfig);
+	fragShader.Initialize(device, shaderConfigs.fragShaderConfig);
 
 	auto vertShaderStage{ vertShader.GetPipelineShaderStageInfo() };
 	auto fragShaderStage{ fragShader.GetPipelineShaderStageInfo() };
@@ -202,56 +217,4 @@ void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShaderConfig& ver
 
 	vertShader.Destroy(device);
 	fragShader.Destroy(device);
-}
-
-void GraphicsPipeline3D::InitScene(VkDevice device, VkPhysicalDevice phyDevice, VkQueue graphxQueue, const CommandPool& cmndPl)
-{
-	std::vector<Model3D> models{};
-
-	Model3D model1{};
-	model1.Initialize(device, phyDevice, graphxQueue, cmndPl, g_Model1Path);
-	model1.SetPosition(glm::vec3{ -5.f, 0.5f, 0.f });
-
-	Model3D model2{}; // plane
-	model2.Initialize(device, phyDevice, graphxQueue, cmndPl, g_Model3Path);
-	model2.SetScale(50.f);
-
-	Model3D model3{}; // cube
-	model3.Initialize(device, phyDevice, graphxQueue, cmndPl, g_Model2Path);
-	model3.SetPosition(glm::vec3{ 2.f, 2.f, 2.f });
-	model3.SetScale(0.5f);
-
-	Model3D model4{}; // cube
-	model4.Initialize(device, phyDevice, graphxQueue, cmndPl, g_Model2Path);
-	model4.SetPosition(glm::vec3{ -2.f, 2.f, 2.f });
-	model4.SetScale(0.5f);
-
-	Model3D model5{}; // cube
-	model5.Initialize(device, phyDevice, graphxQueue, cmndPl, g_Model2Path);
-	model5.SetPosition(glm::vec3{ 2.f, 2.f, -2.f });
-	model5.SetScale(0.5f);
-
-	Model3D model6{}; // cube
-	model6.Initialize(device, phyDevice, graphxQueue, cmndPl, g_Model2Path);
-	model6.SetPosition(glm::vec3{ -2.f, 2.f, -2.f });
-	model6.SetScale(0.5f);
-
-	models.emplace_back(std::move(model1));
-	models.emplace_back(std::move(model2));
-	models.emplace_back(std::move(model3));
-	models.emplace_back(std::move(model4));
-	models.emplace_back(std::move(model5));
-	models.emplace_back(std::move(model6));
-
-	m_Scene.Initialize(std::move(models));
-}
-
-void GraphicsPipeline3D::Destroy(VkDevice device)
-{
-	vkDestroyDescriptorSetLayout(device, m_VkDescriptorSetLayout, nullptr);
-
-	m_Scene.Destroy(device);
-
-	vkDestroyPipeline(device, m_VkPipeline, nullptr);
-	vkDestroyPipelineLayout(device, m_VkPipelineLayout, nullptr);
 }

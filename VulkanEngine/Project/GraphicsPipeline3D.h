@@ -6,6 +6,20 @@
 class CommandPool;
 
 struct ShaderConfig;
+struct ShadersConfigs;
+
+struct DescriptorRequirements
+{
+	uint32_t uniformBufferCount;
+	uint32_t combinedImageSamplerCount;
+
+	DescriptorRequirements& operator+=(const DescriptorRequirements& other)
+	{
+		this->uniformBufferCount += other.uniformBufferCount;
+		this->combinedImageSamplerCount += other.combinedImageSamplerCount;
+		return *this;
+	}
+};
 
 class GraphicsPipeline3D final
 {
@@ -14,12 +28,17 @@ public:
 	GraphicsPipeline3D() = default;
 	~GraphicsPipeline3D() = default;
 
-	void Initialize(VkDevice device, const ShaderConfig& vertSConf, const ShaderConfig& fragSConf, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
-	void InitScene(VkDevice device, VkPhysicalDevice phyDevice, VkQueue graphxQueue, const CommandPool& cmndPl);
+	GraphicsPipeline3D(const GraphicsPipeline3D& other) = delete;
+	GraphicsPipeline3D(GraphicsPipeline3D&& other) noexcept = delete;
+	GraphicsPipeline3D& operator=(const GraphicsPipeline3D& other) = delete;
+	GraphicsPipeline3D& operator=(GraphicsPipeline3D&& other) noexcept = delete;
 
+	void Initialize(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
 	void Destroy(VkDevice device);
 
-	void Draw(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet, uint32_t currentFrame) const;
+	void Draw(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet) const;
+
+	void SetScene(std::vector<Model3D>&& models);
 
 	size_t GetNrOfModels() const;
 	const VkDescriptorSetLayout& GetDescriptorSetLayout() const;
@@ -28,7 +47,7 @@ private:
 
 	void CreateDescriptorSetLayout(VkDevice device);
 	void CreatePipelineLayout(VkDevice device);
-	void CreatePipeline(VkDevice device, const ShaderConfig& vertSConf, const ShaderConfig& fragSConf, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
+	void CreatePipeline(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
 
 private:
 
