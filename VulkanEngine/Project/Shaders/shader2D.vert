@@ -12,8 +12,9 @@ layout(location = 0) out vec3 fragColor;
 
 void main()
 {
-    vec3 transformedPosition = modelUBO.model * vec3(inPosition, 1.0);
+    vec3 localPosition = vec3(inPosition, 0.0);   
+    vec3 transformedPosition = modelUBO.model * localPosition;
     gl_Position = vec4(transformedPosition.xy, 0.0, 1.0);
-    
+
     fragColor = inColor;
 }

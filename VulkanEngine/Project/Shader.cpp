@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "Shader.h"
 #include "VulkanUtils.h"
 #include "Vertex.h"
@@ -15,7 +17,13 @@ void Shader::Initialize(VkDevice device, const std::string& filePath, const std:
     m_FilePath = filePath;
     m_EntryPoint = entryPoint;
     m_ShaderStageFlag = stage;
+
     std::vector<char> code{ ReadFile(m_FilePath) };
+    if (code.empty())
+    {
+        throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
+    }
+
     m_VkShaderModule = CreateShaderModule(device, code);
 }
 
@@ -24,7 +32,13 @@ void Shader::Initialize(VkDevice device, const ShaderConfig& shaderConfig)
     m_FilePath = shaderConfig.filePath;
     m_EntryPoint = shaderConfig.entryPoint;
     m_ShaderStageFlag = shaderConfig.stage;
+
     std::vector<char> code{ ReadFile(m_FilePath) };
+    if (code.empty())
+    {
+        throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
+    }
+
     m_VkShaderModule = CreateShaderModule(device, code);
 }
 
@@ -41,35 +55,12 @@ VkPipelineShaderStageCreateInfo Shader::GetPipelineShaderStageInfo() const
     shaderStageInfo.module = m_VkShaderModule;
     shaderStageInfo.pName = m_EntryPoint.c_str();
 
+    if (!shaderStageInfo.module)
+    {
+        throw std::runtime_error("Shader modules not created correctly!");
+    }
+
     return shaderStageInfo;
-}
-
-VkPipelineVertexInputStateCreateInfo Shader::GetVertex2DInputStateInfo()
-{
-    auto bindingDescription{ new VkVertexInputBindingDescription{ Vertex2D::GetBindingDescription() } };
-    auto attributeDescriptions{ new std::array<VkVertexInputAttributeDescription, 2>{ Vertex2D::GetAttributeDescriptions() } };
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions->size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions->data();
-    return vertexInputInfo;
-}
-
-VkPipelineVertexInputStateCreateInfo Shader::GetVertex3DInputStateInfo()
-{
-    auto bindingDescription{ new VkVertexInputBindingDescription{ Vertex3D::GetBindingDescription() } };
-    auto attributeDescriptions{ new std::array<VkVertexInputAttributeDescription, 3>{ Vertex3D::GetAttributeDescriptions() } };
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions->size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions->data();
-    return vertexInputInfo;
 }
 
 VkPipelineInputAssemblyStateCreateInfo Shader::GetInputAssemblyStateInfo()
@@ -77,7 +68,7 @@ VkPipelineInputAssemblyStateCreateInfo Shader::GetInputAssemblyStateInfo()
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    // VK_PRIMITIVE_TOPOLOGY_LINE_LIST -> for 2D Lib
+    // VK_PRIMITIVE_TOPOLOGY_LINE_LIST -> for 2D line Lib
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     return inputAssembly;

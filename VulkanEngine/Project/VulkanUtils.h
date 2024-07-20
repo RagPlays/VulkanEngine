@@ -9,13 +9,13 @@
 
 const int g_MaxFramesInFlight{ 2 };
 
-const std::string g_Model1Path{ "Resources/Models/viking_room.obj" };
-const std::string g_Texture1Path{ "Resources/Models/viking_room.png" };
+const std::string g_Model3DPath1{ "Resources/Models/viking_room.obj" };
+const std::string g_Model3DPath2{ "Resources/Models/cube.obj" };
 
-const std::string g_Model2Path{ "Resources/Models/cube.obj" };
-const std::string g_Texture2Path{ "Resources/texture.jpg" };
+const std::string g_PlaneModel{ "Resources/Models/plane.obj" };
+const std::string g_TriangleModel{ "Resources/Models/triangle.obj" };
 
-const std::string g_Model3Path{ "Resources/Models/plane.obj" };
-//const std::string g_Texture3Path{ "Resources/Models/viking_room.png" };
+const std::string g_TexturePath1{ "Resources/Models/viking_room.png" };
+const std::string g_TexturePath2{ "Resources/texture.jpg" };
 
 #endif //!VULKANUTILS_H

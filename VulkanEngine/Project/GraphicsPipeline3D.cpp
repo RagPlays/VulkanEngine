@@ -101,11 +101,22 @@ void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	vertShader.Initialize(device, shaderConfigs.vertShaderConfig);
 	fragShader.Initialize(device, shaderConfigs.fragShaderConfig);
 
-	auto vertShaderStage{ vertShader.GetPipelineShaderStageInfo() };
-	auto fragShaderStage{ fragShader.GetPipelineShaderStageInfo() };
-	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages{ vertShaderStage, fragShaderStage };
+	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages
+	{
+		vertShader.GetPipelineShaderStageInfo(),
+		fragShader.GetPipelineShaderStageInfo()
+	};
 
-	auto vertexInputInfo{ Shader::GetVertex3DInputStateInfo() };
+	auto bindingDescription{ std::array<VkVertexInputBindingDescription, 1>{ Vertex3D::GetBindingDescription() } };
+	auto attributeDescriptions{ std::array<VkVertexInputAttributeDescription, 3>{ Vertex3D::GetAttributeDescriptions() } };
+
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescription.size());
+	vertexInputInfo.pVertexBindingDescriptions = bindingDescription.data();
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
 	auto inputAssembly{ Shader::GetInputAssemblyStateInfo() };
 
 	std::array<VkDynamicState, 2> dynamicStates

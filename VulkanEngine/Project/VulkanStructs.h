@@ -40,12 +40,12 @@ struct CameraUBO
 
 struct Model3DUBO
 {
-	alignas(16) glm::mat4 model{};
+	alignas(16) glm::mat4 model{ 1.f };
 };
 
 struct Model2DUBO
 {
-	alignas(16) glm::mat3 model{};
+	alignas(16) glm::mat3 model{ 1.f };
 };
 
 struct Transform2D
@@ -56,16 +56,19 @@ struct Transform2D
 
 	glm::mat3 GetModelMatrix() const
 	{
+		// Compute cosine and sine for rotation
 		const float cosTheta{ std::cos(rotation) };
 		const float sinTheta{ std::sin(rotation) };
 
-		glm::mat3 translateMatrix
+		// Scale matrix
+		glm::mat3 scaleMatrix
 		{
-			{1.f, 0.f, position.x},
-			{0.f, 1.f, position.y},
+			{scale.x, 0.f, 0.f},
+			{0.f, scale.y, 0.f},
 			{0.f, 0.f, 1.f}
 		};
 
+		// Rotation matrix
 		glm::mat3 rotateMatrix
 		{
 			{cosTheta, -sinTheta, 0.f},
@@ -73,13 +76,16 @@ struct Transform2D
 			{0.f, 0.f, 1.f}
 		};
 
-		glm::mat3 scaleMatrix
+		// Translation matrix
+		glm::mat3 translateMatrix
 		{
-			{scale.x, 0.f, 0.f},
-			{0.f, scale.y, 0.f},
+			{1.f, 0.f, position.x},
+			{0.f, 1.f, position.y},
 			{0.f, 0.f, 1.f}
 		};
-		return scaleMatrix * rotateMatrix * translateMatrix;
+
+		const glm::mat3 returnMat{ translateMatrix * rotateMatrix * scaleMatrix };
+		return returnMat;
 	}
 };
 

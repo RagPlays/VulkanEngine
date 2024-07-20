@@ -8,9 +8,9 @@
 
 struct ShaderConfig
 {
-    std::string filePath;
-    std::string entryPoint;
-    VkShaderStageFlagBits stage;
+    std::string filePath{};
+    std::string entryPoint{};
+    VkShaderStageFlagBits stage{};
 };
 
 struct ShadersConfigs
@@ -32,8 +32,6 @@ public:
 
     VkPipelineShaderStageCreateInfo GetPipelineShaderStageInfo() const;
 
-    static VkPipelineVertexInputStateCreateInfo GetVertex2DInputStateInfo();
-    static VkPipelineVertexInputStateCreateInfo GetVertex3DInputStateInfo();
     static VkPipelineInputAssemblyStateCreateInfo GetInputAssemblyStateInfo();
 
 private:
@@ -48,6 +46,9 @@ private:
     std::string m_EntryPoint;
     VkShaderModule m_VkShaderModule;
     VkShaderStageFlagBits m_ShaderStageFlag;
+
+    static VkPipelineVertexInputStateCreateInfo m_Vertex2DInputStateInfo;
+    static VkPipelineVertexInputStateCreateInfo m_Vertex3DInputStateInfo;
 
 };
 

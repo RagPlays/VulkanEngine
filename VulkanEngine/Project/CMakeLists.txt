@@ -12,7 +12,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     set(SPIRV "${SHADER_BINARY_DIR}/${FILE_NAME}.spv")
     add_custom_command(
         OUTPUT ${SPIRV}
-        COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${GLSL} -o ${SPIRV}
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -g ${GLSL} -o ${SPIRV}
         DEPENDS ${GLSL}
     )
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})
@@ -23,12 +23,13 @@ add_custom_target(
     DEPENDS ${SPIRV_BINARY_FILES}
 )
 
-set(SOURCES
-    "Libraries/stb_image.h"
-    "Libraries/tiny_obj_loader.h"
+set(STB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libs/stb")
+set(OBJLOADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libs/tinyobjloader")
+
+set(SOURCES 
     "main.cpp"
-    "VulkanBase.h"
-    "VulkanBase.cpp"
+    "Application.h"
+    "Application.cpp"
     "VulkanUtils.h"
     "VulkanStructs.h"
     "RenderPass.h"
@@ -71,23 +72,56 @@ set(SOURCES
     "GraphicsPipeline2D.h"
     "GraphicsPipeline2D.cpp"
     "Vertex.h"
-    )
-
-set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/Project/Resources")
-set(DESTINATION_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-
-# Copy resources to build directory using add_custom_target with DEPENDS
-file(COPY ${RESOURCES_DIR} DESTINATION ${DESTINATION_DIR})
-add_custom_target(CopyResources ALL
-    COMMENT "Copying resources directory to build directory"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${RESOURCES_DIR} ${DESTINATION_DIR}
-    DEPENDS ${RESOURCES_DIR}
 )
+
 # Create the executable
-add_executable(VulkanEngine ${SOURCES} ${GLSL_SOURCE_FILES} )
+add_executable(${PROJECT_NAME} ${SOURCES} ${GLSL_SOURCE_FILES})
 add_dependencies(${PROJECT_NAME} Shaders)
 
 # Link libraries
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(VulkanEngine PRIVATE ${Vulkan_LIBRARIES} glfw)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${Vulkan_LIBRARIES} glfw)
+
+# Include STB image
+target_include_directories(${PROJECT_NAME} PRIVATE "${STB_DIR}/include")
+# Include tinyObjLoader
+target_include_directories(${PROJECT_NAME} PRIVATE "${OBJLOADER_DIR}/include")
+
+# Copy resources
+set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/Project/Resources")
+file(COPY ${RESOURCES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_target(CopyResources ALL
+    COMMENT "Copying resources directory to build directory"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${RESOURCES_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${RESOURCES_DIR}
+)
+
+# Visual Leak Detector
+if(WIN32 AND CMAKE_BUILD_TYPE MATCHES Debug)
+
+    add_compile_definitions(ENABLE_VLD=1)
+    set(VLD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libs/vld")
+    add_library(vld STATIC IMPORTED)
+
+    set_target_properties(vld PROPERTIES
+        IMPORTED_LOCATION "${VLD_DIR}/lib/vld.lib"
+        INTERFACE_INCLUDE_DIRECTORIES "${VLD_DIR}/include/"
+    )
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${Vulkan_LIBRARIES} vld)
+
+    set(DLL_SOURCE_DIR "${VLD_DIR}/lib")
+
+    file(GLOB_RECURSE DLL_FILES
+        "${DLL_SOURCE_DIR}/*.dll"
+        "${DLL_SOURCE_DIR}/*.manifest"
+    )
+
+    foreach(DLL ${DLL_FILES})
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${DLL}
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+    endforeach(DLL)
+
+endif()

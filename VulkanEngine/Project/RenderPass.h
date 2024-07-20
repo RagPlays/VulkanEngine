@@ -22,7 +22,7 @@ public:
 
 private:
 
-	VkRenderPass m_RenderPass;
+	VkRenderPass m_VkRenderPass;
 
 };
 

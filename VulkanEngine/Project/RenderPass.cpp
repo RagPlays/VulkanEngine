@@ -4,7 +4,7 @@
 #include "RenderPass.h"
 
 RenderPass::RenderPass()
-	: m_RenderPass{ VK_NULL_HANDLE }
+	: m_VkRenderPass{ VK_NULL_HANDLE }
 {
 }
 
@@ -66,7 +66,7 @@ void RenderPass::Initialize(VkDevice device, VkFormat swapchainImageFormat, VkFo
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS)
+	if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_VkRenderPass) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create render pass!");
 	}
@@ -74,10 +74,10 @@ void RenderPass::Initialize(VkDevice device, VkFormat swapchainImageFormat, VkFo
 
 void RenderPass::Destroy(VkDevice device)
 {
-	vkDestroyRenderPass(device, m_RenderPass, nullptr);
+	vkDestroyRenderPass(device, m_VkRenderPass, nullptr);
 }
 
 const VkRenderPass& RenderPass::GetVkRenderPass() const
 {
-	return m_RenderPass;
+	return m_VkRenderPass;
 }

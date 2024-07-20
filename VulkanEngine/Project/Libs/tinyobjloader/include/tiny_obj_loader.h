@@ -68,7 +68,8 @@ THE SOFTWARE.
 #include <string>
 #include <vector>
 
-namespace tinyobj {
+namespace tinyobj
+{
 
 // TODO(syoyo): Better C++11 detection for older compiler
 #if __cplusplus > 199711L

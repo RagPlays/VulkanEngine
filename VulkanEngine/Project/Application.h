@@ -40,6 +40,7 @@
 #include "Scene.h"
 #include "Texture.h"
 #include "Window.h"
+#include "GraphicsPipeline2D.h"
 #include "GraphicsPipeline3D.h"
 
 class Application final
@@ -58,6 +59,7 @@ private:
 	void Cleanup();
 
 	void DrawFrame();
+	void RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex);
 
 	// Phicsical Devices
 	void PickPhysicalDevice();
@@ -77,12 +79,11 @@ private:
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	// Graphics Pipeline
-	void CreateGraphicsPipeline3D();
+	void CreateGraphicsPipelines();
 
 	// Command Pool
 	void CreateCommandPool();
 	void CreateCommandBuffer();
-	void RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex);
 
 	// DescriptorPool
 	void CreateDescriptorPool();
@@ -93,10 +94,7 @@ private:
 	void CreateTextureSampler();
 
 	// Scene
-	void CreateScene();
-
-	// UniformBufferObject
-	void UpdateUniformBuffers();
+	void CreateScenes();
 
 	// Depth Buffer
 	void CreateDepthResources();
@@ -105,7 +103,6 @@ private:
 	bool HasStencilComponent(VkFormat format);
 
 private:
-
 
 	// Window
 	Window m_Window;
@@ -133,6 +130,7 @@ private:
 	RenderPass m_RenderPass;
 
 	// Pipeline
+	GraphicsPipeline2D m_GraphicsPipeline2D;
 	GraphicsPipeline3D m_GraphicsPipeline3D;
 
 	// Frame Buffers
@@ -147,9 +145,6 @@ private:
 
 	// Frames in flight
 	uint32_t m_CurrentFrame{ 0 };
-
-	// Scene
-	Scene3D m_Scene;
 
 	// DescriptorPool
 	VkDescriptorPool m_DescriptorPool;

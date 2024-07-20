@@ -1,16 +1,18 @@
+#include <iostream>
 #include <unordered_map>
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include <Libraries/tiny_obj_loader.h>
+#include <tiny_obj_loader.h>
 
 #include "Model.h"
 #include "VulkanUtils.h"
 #include "Camera.h"
 
 // MODEL 2D //
-
 Model2D::Model2D()
-    : m_NrIndices{}
+    : m_Transform{}
+    , m_ModelMatrix{}
+    , m_NrIndices {}
     , m_VertexBuffer{}
     , m_IndexBuffer{}
 {
@@ -24,12 +26,14 @@ void Model2D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue qu
 
     LoadModelFromFile(modelFilePath, vertices, indices);
     InitDataBuffers(device, phyDevice, queue, cmndP, vertices, indices);
+    UpdateModelMatrix();
 }
 
 void Model2D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices)
 {
     m_NrIndices = static_cast<uint32_t>(indices.size());
     InitDataBuffers(device, phyDevice, queue, cmndP, vertices, indices);
+    UpdateModelMatrix();
 }
 
 void Model2D::Destroy(VkDevice device)
@@ -59,11 +63,12 @@ void Model2D::SetScale(const glm::vec2& scale)
 void Model2D::SetScale(float scale)
 {
     SetScale(glm::vec2{ scale, scale });
+    UpdateModelMatrix();
 }
 
 void Model2D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const
 {
-    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Model2DUBO), &m_ModelMatrix);
+    //vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Model2DUBO), &m_ModelMatrix);
 
     m_VertexBuffer.BindAsVertexBuffer(commandBuffer);
     m_IndexBuffer.BindAsIndexBuffer(commandBuffer);
@@ -114,6 +119,41 @@ void Model2D::LoadModelFromFile(const std::string& filePath, std::vector<Vertex2
 
 void Model2D::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices)
 {
+    /////// Vertex Buffer ///////
+    const VkDeviceSize vertexBufferSize{ sizeof(vertices[0]) * vertices.size() };
+
+    const VkBufferUsageFlags stagingBufferUsage{ VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
+    const VkMemoryPropertyFlags stagingBufferProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+    const VkMemoryPropertyFlags bufferProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
+
+    // staging buffer //
+    DataBuffer stagingVBuffer{};
+    stagingVBuffer.Initialize(device, phyDevice, stagingBufferProperties, vertexBufferSize, stagingBufferUsage);
+    stagingVBuffer.Upload(device, vertexBufferSize, vertices.data());
+
+    // vertex buffer //
+    const VkBufferUsageFlags vertexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT };
+
+    m_VertexBuffer.Initialize(device, phyDevice, bufferProperties, vertexBufferSize, vertexBufferUsage);
+    DataBuffer::CopyBuffer(queue, device, commandPool, stagingVBuffer, m_VertexBuffer, vertexBufferSize);
+
+    stagingVBuffer.Destroy(device);
+
+    /////// Index Buffer ///////
+    const VkDeviceSize indexBufferSize{ sizeof(indices[0]) * indices.size() };
+
+    // staging buffer //
+    DataBuffer stagingIBuffer{};
+    stagingIBuffer.Initialize(device, phyDevice, stagingBufferProperties, indexBufferSize, stagingBufferUsage);
+    stagingIBuffer.Upload(device, indexBufferSize, indices.data());
+
+    // index buffer //
+    const VkBufferUsageFlags indexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT };
+
+    m_IndexBuffer.Initialize(device, phyDevice, bufferProperties, indexBufferSize, indexBufferUsage);
+    DataBuffer::CopyBuffer(queue, device, commandPool, stagingIBuffer, m_IndexBuffer, indexBufferSize);
+
+    stagingIBuffer.Destroy(device);
 }
 
 void Model2D::UpdateModelMatrix()
@@ -122,7 +162,6 @@ void Model2D::UpdateModelMatrix()
 }
 
 // MODEL 3D //
-
 Model3D::Model3D()
     : m_Transform{}
     , m_ModelMatrix{}
@@ -140,12 +179,14 @@ void Model3D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue qu
 
     LoadModelFromFile(modelFilePath, vertices, indices);
     InitDataBuffers(device, phyDevice, queue, commandPool, vertices, indices);
+    UpdateModelMatrix();
 }
 
 void Model3D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices)
 {
     m_NrIndices = static_cast<uint32_t>(indices.size());
     InitDataBuffers(device, phyDevice, queue, cmndP, vertices, indices);
+    UpdateModelMatrix();
 }
 
 void Model3D::Destroy(VkDevice device)

@@ -46,7 +46,7 @@ float Timer::GetFPS() const
 
 // Private Functions //
 Timer::Timer()
-	: m_PrintFPS{ true }
+	: m_PrintFPS{ false }
 	, m_ElapsedSec{}
 	, m_LastTime{ std::chrono::high_resolution_clock::now() }
 {

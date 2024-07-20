@@ -1,5 +1,4 @@
-#include "VulkanBase.h"
-
+#include "Application.h"
 #include "Timer.h"
 
 void Application::Run()
@@ -24,17 +23,17 @@ void Application::InitVulkan()
 	
 	m_RenderPass.Initialize(m_Device, m_SwapChainImageFormat, FindDepthFormat());
 
-	CreateGraphicsPipeline3D();
+	CreateGraphicsPipelines();
 
 	CreateCommandPool();
 
 	CreateDepthResources();
 	CreateFramebuffers();
 
-	m_Texture.Initialize(m_Device, m_PhysicalDevice, m_CommandPool, m_GraphicsQueue, g_Texture1Path);
+	m_Texture.Initialize(m_Device, m_PhysicalDevice, m_CommandPool, m_GraphicsQueue, g_TexturePath1);
 	CreateTextureSampler();
 
-	CreateScene();
+	CreateScenes();
 	m_Camera.Initialize(m_Device, m_PhysicalDevice, m_Window.GetAspectRatio(), m_Window.GetWindow());
 
 	CreateDescriptorPool();
@@ -64,14 +63,13 @@ void Application::Cleanup()
 	m_TextureSampler.Destroy(m_Device);
 	m_Texture.Destroy(m_Device);
 
-	m_Scene.Destroy(m_Device);
-
 	m_Camera.Destroy(m_Device);
 	
 	vkFreeDescriptorSets(m_Device, m_DescriptorPool, static_cast<uint32_t>(m_DescriptorSets.size()), m_DescriptorSets.data());
 	vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
 
 	m_GraphicsPipeline3D.Destroy(m_Device);
+	m_GraphicsPipeline2D.Destroy(m_Device);
 
 	m_RenderPass.Destroy(m_Device);
 
@@ -120,8 +118,8 @@ void Application::DrawFrame()
 	// Reset the fence for this frame
 	vkResetFences(m_Device, 1, &inFlightFence);
 
-	// Update Uniform Buffers
-	UpdateUniformBuffers();
+	// Update the camera (view and projection matrices) uniform buffer
+	m_Camera.Update(m_CurrentFrame);
 
 	// Record commands in the command buffer for this frame
 	RecordCommandBuffer(m_CommandBuffers[m_CurrentFrame], imageIndex);
@@ -167,6 +165,53 @@ void Application::DrawFrame()
 	}
 
 	m_CurrentFrame = (m_CurrentFrame + 1) % g_MaxFramesInFlight;
+}
+
+void Application::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex)
+{
+	std::array<VkClearValue, 2> clearValues{};
+	clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+	clearValues[1].depthStencil = { 1.0f, 0 };
+
+	VkRenderPassBeginInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = m_RenderPass.GetVkRenderPass();
+	renderPassInfo.framebuffer = m_SwapChainFramebuffers[imageIndex];
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = m_SwapChainExtent;
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
+
+	VkViewport viewport{};
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = static_cast<float>(m_SwapChainExtent.width);
+	viewport.height = static_cast<float>(m_SwapChainExtent.height);
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	VkRect2D scissor{};
+	scissor.offset = { 0, 0 };
+	scissor.extent = m_SwapChainExtent;
+
+	const VkCommandBuffer& cmndBffr{ commandBuffer.GetVkCommandBuffer() };
+
+	commandBuffer.Reset();
+
+	commandBuffer.BeginRecording();
+
+	commandBuffer.BeginRenderPass(renderPassInfo);
+
+	vkCmdSetViewport(cmndBffr, 0, 1, &viewport);
+
+	vkCmdSetScissor(cmndBffr, 0, 1, &scissor);
+
+	m_GraphicsPipeline3D.Draw(cmndBffr, m_DescriptorSets[m_CurrentFrame]);
+	m_GraphicsPipeline2D.Draw(cmndBffr);
+
+	commandBuffer.EndRenderPass();
+
+	commandBuffer.EndRecording();
 }
 
 void Application::PickPhysicalDevice()
@@ -530,27 +575,45 @@ VkExtent2D Application::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabil
 	}
 }
 
-void Application::CreateGraphicsPipeline3D()
+void Application::CreateGraphicsPipelines()
 {
-	const ShaderConfig vertShaderConfig
+	const VkRenderPass& renderPass{ m_RenderPass.GetVkRenderPass() };
+
+	const ShaderConfig vertShaderConfig2D
+	{
+		"Shaders/shader2D.vert.spv",
+		"main",
+		VK_SHADER_STAGE_VERTEX_BIT
+	};
+
+	const ShaderConfig fragShaderConfig2D
+	{
+		"Shaders/shader2D.frag.spv",
+		"main",
+		VK_SHADER_STAGE_FRAGMENT_BIT
+	};
+
+	const ShadersConfigs shaderConfigs2D{ vertShaderConfig2D, fragShaderConfig2D };
+
+	m_GraphicsPipeline2D.Initialize(m_Device, shaderConfigs2D, m_SwapChainExtent, m_RenderPass.GetVkRenderPass());
+
+	const ShaderConfig vertShaderConfig3D
 	{
 		"Shaders/shader3D.vert.spv",
 		"main",
 		VK_SHADER_STAGE_VERTEX_BIT
 	};
 
-	const ShaderConfig fragShaderConfig
+	const ShaderConfig fragShaderConfig3D
 	{
 		"Shaders/shader3D.frag.spv",
 		"main",
 		VK_SHADER_STAGE_FRAGMENT_BIT
 	};
 
-	const ShadersConfigs shaderConfigs{ vertShaderConfig, fragShaderConfig };
+	const ShadersConfigs shaderConfigs3D{ vertShaderConfig3D, fragShaderConfig3D };
 
-	const VkRenderPass& renderPass{ m_RenderPass.GetVkRenderPass() };
-
-	m_GraphicsPipeline3D.Initialize(m_Device, shaderConfigs, m_SwapChainExtent, renderPass);
+	m_GraphicsPipeline3D.Initialize(m_Device, shaderConfigs3D, m_SwapChainExtent, renderPass);
 }
 
 void Application::CreateCommandPool()
@@ -567,54 +630,6 @@ void Application::CreateCommandBuffer()
 	{
 		m_CommandBuffers[idx] = m_CommandPool.CreateCommandBuffer(m_Device);
 	}
-}
-
-void Application::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex)
-{
-	constexpr VkPipelineBindPoint bindPoint{ VK_PIPELINE_BIND_POINT_GRAPHICS };
-
-	std::array<VkClearValue, 2> clearValues{};
-	clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-	clearValues[1].depthStencil = { 1.0f, 0 };
-
-	VkRenderPassBeginInfo renderPassInfo{};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = m_RenderPass.GetVkRenderPass();
-	renderPassInfo.framebuffer = m_SwapChainFramebuffers[imageIndex];
-	renderPassInfo.renderArea.offset = { 0, 0 };
-	renderPassInfo.renderArea.extent = m_SwapChainExtent;
-	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-	renderPassInfo.pClearValues = clearValues.data();
-
-	VkViewport viewport{};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = static_cast<float>(m_SwapChainExtent.width);
-	viewport.height = static_cast<float>(m_SwapChainExtent.height);
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	VkRect2D scissor{};
-	scissor.offset = { 0, 0 };
-	scissor.extent = m_SwapChainExtent;
-
-	commandBuffer.Reset();
-
-	commandBuffer.BeginRecording();
-
-	VkCommandBuffer cmndBffr{ commandBuffer.GetVkCommandBuffer() };
-
-	commandBuffer.BeginRenderPass(renderPassInfo);
-	{
-		vkCmdSetViewport(cmndBffr, 0, 1, &viewport);
-
-		vkCmdSetScissor(cmndBffr, 0, 1, &scissor);
-
-		m_GraphicsPipeline3D.Draw(cmndBffr, m_DescriptorSets[m_CurrentFrame]);
-	}
-	commandBuffer.EndRenderPass();
-
-	commandBuffer.EndRecording();
 }
 
 void Application::CreateDescriptorPool()
@@ -699,52 +714,71 @@ void Application::CreateTextureSampler()
 	m_TextureSampler.Initialize(m_Device, m_PhysicalDevice);
 }
 
-void Application::CreateScene()
+void Application::CreateScenes()
 {
-	std::vector<Model3D> models{};
+	// 2D SCENE //
+	std::vector<Model2D> models2D{};
+	const std::vector<Vertex2D> vertices
+	{
+		{{-0.5f, -0.5f}, {0.5f, 0.2f, 0.8f}}, // Purple
+		{{0.5f, -0.5f}, {0.8f, 0.6f, 0.2f}},  // Gold
+		{{0.5f, 0.5f}, {0.2f, 0.8f, 0.5f}},   // Turquoise
+		{{-0.5f, 0.5f}, {0.9f, 0.1f, 0.3f}}   // Red
+	};
+	const std::vector<uint32_t> indices
+	{
+		0, 1, 2, 2, 3, 0
+	};
+	Model2D model2D1{};
+	model2D1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, vertices, indices);
+	model2D1.SetPosition(glm::vec2{ 0.f, 0.f });
+	model2D1.SetRotation(0);
+	model2D1.SetScale(1.f);
+
+	models2D.emplace_back(std::move(model2D1));
+
+	m_GraphicsPipeline2D.SetScene(std::move(models2D));
+
+	// 3D SCENE //
+
+	std::vector<Model3D> models3D{};
 
 	Model3D model1{};
-	model1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model1Path);
+	model1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3DPath1);
 	model1.SetPosition(glm::vec3{ -5.f, 0.5f, 0.f });
 
 	Model3D model2{}; // plane
-	model2.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3Path);
+	model2.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_PlaneModel);
 	model2.SetScale(50.f);
 
 	Model3D model3{}; // cube
-	model3.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model3.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3DPath2);
 	model3.SetPosition(glm::vec3{ 2.f, 2.f, 2.f });
 	model3.SetScale(0.5f);
 
 	Model3D model4{}; // cube
-	model4.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model4.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3DPath2);
 	model4.SetPosition(glm::vec3{ -2.f, 2.f, 2.f });
 	model4.SetScale(0.5f);
 
 	Model3D model5{}; // cube
-	model5.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model5.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3DPath2);
 	model5.SetPosition(glm::vec3{ 2.f, 2.f, -2.f });
 	model5.SetScale(0.5f);
 
 	Model3D model6{}; // cube
-	model6.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model2Path);
+	model6.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, g_Model3DPath2);
 	model6.SetPosition(glm::vec3{ -2.f, 2.f, -2.f });
 	model6.SetScale(0.5f);
 
-	models.emplace_back(std::move(model1));
-	models.emplace_back(std::move(model2));
-	models.emplace_back(std::move(model3));
-	models.emplace_back(std::move(model4));
-	models.emplace_back(std::move(model5));
-	models.emplace_back(std::move(model6));
+	models3D.emplace_back(std::move(model1));
+	models3D.emplace_back(std::move(model2));
+	models3D.emplace_back(std::move(model3));
+	models3D.emplace_back(std::move(model4));
+	models3D.emplace_back(std::move(model5));
+	models3D.emplace_back(std::move(model6));
 
-	m_GraphicsPipeline3D.SetScene(std::move(models));
-}
-
-void Application::UpdateUniformBuffers()
-{
-	// Update the camera (view and projection matrices) uniform buffer
-	m_Camera.Update(m_CurrentFrame);
+	m_GraphicsPipeline3D.SetScene(std::move(models3D));
 }
 
 void Application::CreateDepthResources()
@@ -759,7 +793,7 @@ void Application::CreateDepthResources()
 
 VkFormat Application::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
-	for (VkFormat format : candidates)
+	for (const VkFormat& format : candidates)
 	{
 		VkFormatProperties props;
 		vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, format, &props);

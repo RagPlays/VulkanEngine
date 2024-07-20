@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Scene.h"
+#include "RenderPass.h"
 
 class CommandPool;
 
@@ -24,6 +25,10 @@ public:
 	void Initialize(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
 	void Destroy(VkDevice device);
 
+	void Draw(VkCommandBuffer commandBuffer);
+
+	void SetScene(std::vector<Model2D>&& models);
+
 private:
 
 	void CreatePipelineLayout(VkDevice device);
@@ -31,6 +36,11 @@ private:
 
 private:
 
+	// Pipeline
+	VkPipeline m_VkPipeline;
+	VkPipelineLayout m_VkPipelineLayout;
+
+	// Scene
 	Scene2D m_Scene;
 
 };

@@ -1,7 +1,10 @@
 #include <stdexcept>
 
+#include <iostream>
+#include <filesystem>
+
 #define STB_IMAGE_IMPLEMENTATION
-#include <Libraries/stb_image.h>
+#include <stb_image.h>
 
 #include "Texture.h"
 
@@ -43,6 +46,11 @@ const ImageView& Texture::GetImageView() const
 
 void Texture::InitImage(VkDevice device, VkPhysicalDevice phyDevice, const CommandPool& cmndPl, VkQueue queue, const std::string& filePath, VkFormat imageFormat)
 {
+	if (!std::filesystem::exists(filePath))
+	{
+		throw std::runtime_error("Image file does not exist: " + filePath);
+	}
+
 	const VkImageTiling imageTilling{ VK_IMAGE_TILING_OPTIMAL };
 	const VkImageUsageFlags imageUsage{ VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT };
 	const VkMemoryPropertyFlags imageProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
@@ -61,7 +69,7 @@ void Texture::InitImage(VkDevice device, VkPhysicalDevice phyDevice, const Comma
 	stbi_uc* pixels{ stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha) };
 	const VkDeviceSize imageSize{ static_cast<uint64_t>(texWidth * texHeight * 4) };
 
-	if (!pixels) throw std::runtime_error("failed to load texture image!");
+	if (!pixels) throw std::runtime_error("failed to load texture image: " + std::string(stbi_failure_reason()));
 
 	DataBuffer stagingBuffer{};
 	stagingBuffer.Initialize(device, phyDevice, stagingBufferProperties, imageSize, stagingBufferUsage);
