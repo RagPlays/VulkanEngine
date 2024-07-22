@@ -72,7 +72,7 @@ set(SOURCES
     "GraphicsPipeline2D.h"
     "GraphicsPipeline2D.cpp"
     "Vertex.h"
-)
+ "DepthBuffer.cpp" "DepthBuffer.h")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${GLSL_SOURCE_FILES})

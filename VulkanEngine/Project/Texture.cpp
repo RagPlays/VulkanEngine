@@ -14,6 +14,7 @@
 Texture::Texture()
 	: m_Image{}
 	, m_ImageView{}
+	, m_TextureSampler{}
 {
 }
 
@@ -26,12 +27,20 @@ void Texture::Initialize(VkDevice device, VkPhysicalDevice phyDevice, const Comm
 
 	// ImageView //
 	InitImageView(device, imageFormat);
+
+	m_TextureSampler.Initialize(device, phyDevice);
 }
 
 void Texture::Destroy(VkDevice device)
 {
+	m_TextureSampler.Destroy(device);
 	m_ImageView.Destroy(device);
 	m_Image.Destroy(device);
+}
+
+const VkImage& Texture::GetVkImage() const
+{
+	return m_Image.GetVkImage();
 }
 
 const Image& Texture::GetImage() const
@@ -39,9 +48,24 @@ const Image& Texture::GetImage() const
 	return m_Image;
 }
 
+const VkImageView& Texture::GetVkImageView() const
+{
+	return m_ImageView.GetVkImageView();
+}
+
 const ImageView& Texture::GetImageView() const
 {
 	return m_ImageView;
+}
+
+const VkSampler& Texture::GetVkSampler() const
+{
+	return m_TextureSampler.GetVkSampler();
+}
+
+const Sampler& Texture::GetSampler() const
+{
+	return m_TextureSampler;
 }
 
 void Texture::InitImage(VkDevice device, VkPhysicalDevice phyDevice, const CommandPool& cmndPl, VkQueue queue, const std::string& filePath, VkFormat imageFormat)

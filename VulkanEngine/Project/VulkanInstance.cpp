@@ -15,7 +15,10 @@
 const std::vector<const char*> VulkanInstance::s_DeviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 const std::vector<const char*> VulkanInstance::s_ValidationLayers{ "VK_LAYER_KHRONOS_validation" };
 
-void VulkanInstance::Initialize(const std::string& appName, const std::string& engineName, GLFWwindow* window)
+const std::string VulkanInstance::s_AppName{ "VulkanApplication" };
+const std::string VulkanInstance::s_EngineName{ "MorrogEngine" };
+
+void VulkanInstance::Initialize(GLFWwindow* window)
 {
 	if (m_ValidationLayersEnabled && !CheckValidationLayerSupport())
 	{
@@ -24,9 +27,9 @@ void VulkanInstance::Initialize(const std::string& appName, const std::string& e
 
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = appName.c_str(); //"VulkanEngine"
+	appInfo.pApplicationName = s_AppName.c_str(); //"VulkanEngine"
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = engineName.c_str(); //"MorrogEngine"
+	appInfo.pEngineName = s_EngineName.c_str(); //"MorrogEngine"
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.apiVersion = VK_API_VERSION_1_0;
 

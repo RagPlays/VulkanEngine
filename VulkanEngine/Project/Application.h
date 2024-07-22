@@ -42,6 +42,7 @@
 #include "Window.h"
 #include "GraphicsPipeline2D.h"
 #include "GraphicsPipeline3D.h"
+#include "DepthBuffer.h"
 
 class Application final
 {
@@ -86,19 +87,8 @@ private:
 	void CreateCommandPool();
 	void CreateCommandBuffers();
 
-	// DescriptorPool
-	void CreateDescriptorPool();
-	void AllocateDescriptorSets();
-	void UpdateDescriptorSets();
-
 	// Scene
 	void CreateScenes();
-
-	// Depth Buffer
-	void CreateDepthResources();
-	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-	VkFormat FindDepthFormat();
-	bool HasStencilComponent(VkFormat format);
 
 private:
 
@@ -108,11 +98,11 @@ private:
 	// Instances And Debug Messeges
 	VulkanInstance m_VulkanInstance;
 
-	// Window Surface
+	// Surface
 	Surface m_Surface;
 
 	// Devices
-	VkPhysicalDevice m_PhysicalDevice{ VK_NULL_HANDLE };
+	VkPhysicalDevice m_PhysicalDevice;
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
 	VkQueue m_PresentQueue;
@@ -144,17 +134,11 @@ private:
 	// Frames in flight
 	uint32_t m_CurrentFrame;
 
-	// DescriptorPool
-	VkDescriptorPool m_DescriptorPool;
-	std::vector<VkDescriptorSet> m_DescriptorSets;
-
 	// Textures
 	Texture m_Texture;
-	Sampler m_TextureSampler;
 
 	// Depth Buffer
-	Image m_DepthImage;
-	ImageView m_DepthImageView;
+	DepthBuffer m_DepthBuffer;
 
 	// Camera
 	Camera m_Camera;

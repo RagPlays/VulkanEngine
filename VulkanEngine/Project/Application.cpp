@@ -12,7 +12,7 @@ void Application::InitVulkan()
 {
 	m_Window.Initialize();
 
-	m_VulkanInstance.Initialize(g_AppName, g_EngineName, m_Window.GetWindow());
+	m_VulkanInstance.Initialize(m_Window.GetWindow());
 	m_Surface.Initialize(m_VulkanInstance.GetVkInstance(), m_Window.GetWindow());
 
 	PickPhysicalDevice();
@@ -20,29 +20,23 @@ void Application::InitVulkan()
 
 	CreateSwapChain();
 	CreateSwapChainImageViews();
-	
-	m_RenderPass.Initialize(m_Device, m_SwapChainImageFormat, FindDepthFormat());
 
 	CreateCommandPool();
 	CreateCommandBuffers();
 
-	// Texture
-	m_Texture.Initialize(m_Device, m_PhysicalDevice, m_CommandPool, m_GraphicsQueue, g_TexturePath1);
-	m_TextureSampler.Initialize(m_Device, m_PhysicalDevice);
+	m_DepthBuffer.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, m_SwapChainExtent.width, m_SwapChainExtent.height);
 
-	// Camera
+	m_RenderPass.Initialize(m_Device, m_SwapChainImageFormat, m_DepthBuffer.GetDepthFormat());
+
+	m_Texture.Initialize(m_Device, m_PhysicalDevice, m_CommandPool, m_GraphicsQueue, g_TexturePath1);
+
 	m_Camera.Initialize(m_Device, m_PhysicalDevice, m_Window.GetAspectRatio(), m_Window.GetWindow());
 
-	CreateDepthResources();
 	CreateFramebuffers();
 
 	CreateGraphicsPipeline2D();
 	CreateGraphicsPipeline3D();
 	CreateScenes();
-
-	CreateDescriptorPool();
-	AllocateDescriptorSets();
-	UpdateDescriptorSets();
 
 	m_SyncObjects.Initialize(m_Device);
 }
@@ -62,13 +56,9 @@ void Application::Cleanup()
 {
 	CleanupSwapChain();
 
-	m_TextureSampler.Destroy(m_Device);
 	m_Texture.Destroy(m_Device);
 
 	m_Camera.Destroy(m_Device);
-	
-	vkFreeDescriptorSets(m_Device, m_DescriptorPool, static_cast<uint32_t>(m_DescriptorSets.size()), m_DescriptorSets.data());
-	vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
 
 	m_GraphicsPipeline3D.Destroy(m_Device);
 	m_GraphicsPipeline2D.Destroy(m_Device);
@@ -208,7 +198,7 @@ void Application::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imag
 
 	vkCmdSetScissor(cmndBffr, 0, 1, &scissor);
 
-	m_GraphicsPipeline3D.Draw(cmndBffr, m_DescriptorSets[m_CurrentFrame]);
+	m_GraphicsPipeline3D.Draw(cmndBffr, m_CurrentFrame);
 	m_GraphicsPipeline2D.Draw(cmndBffr);
 
 	commandBuffer.EndRenderPass();
@@ -432,7 +422,7 @@ void Application::RecreateSwapChain()
 
 	CreateSwapChain();
 	CreateSwapChainImageViews();
-	CreateDepthResources();
+	m_DepthBuffer.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, m_SwapChainExtent.width, m_SwapChainExtent.height);
 	CreateFramebuffers();
 }
 
@@ -456,7 +446,7 @@ void Application::CreateFramebuffers()
 		std::array<VkImageView, 2> attachments
 		{
 			m_SwapChainImageViews[idx].GetVkImageView(),
-			m_DepthImageView.GetVkImageView()
+			m_DepthBuffer.GetVkImageView()
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
@@ -477,8 +467,7 @@ void Application::CreateFramebuffers()
 
 void Application::CleanupSwapChain()
 {
-	m_DepthImage.Destroy(m_Device);
-	m_DepthImageView.Destroy(m_Device);
+	m_DepthBuffer.Destroy(m_Device);
 
 	for (auto framebuffer : m_SwapChainFramebuffers)
 	{
@@ -632,7 +621,7 @@ void Application::CreateGraphicsPipeline3D()
 	configs.swapchainExtent = m_SwapChainExtent;
 	configs.renderPass = renderPass;
 
-	m_GraphicsPipeline3D.Initialize(configs);
+	m_GraphicsPipeline3D.Initialize(configs, &m_Texture, &m_Camera);
 }
 
 void Application::CreateCommandPool()
@@ -648,83 +637,6 @@ void Application::CreateCommandBuffers()
 	for (int idx{}; idx < g_MaxFramesInFlight; ++idx)
 	{
 		m_CommandBuffers[idx] = m_CommandPool.CreateCommandBuffer(m_Device);
-	}
-}
-
-void Application::CreateDescriptorPool()
-{
-	std::array<VkDescriptorPoolSize, 2> poolSizes{};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
-
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
-
-	VkDescriptorPoolCreateInfo poolInfo{};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(g_MaxFramesInFlight);
-	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-	if (vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to create descriptor pool!");
-	}
-}
-
-void Application::AllocateDescriptorSets()
-{
-	std::vector<VkDescriptorSetLayout> layouts{ g_MaxFramesInFlight, m_GraphicsPipeline3D.GetDescriptorSetLayout() };
-	VkDescriptorSetAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = m_DescriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-	allocInfo.pSetLayouts = layouts.data();
-
-	m_DescriptorSets.resize(layouts.size());
-
-	if (vkAllocateDescriptorSets(m_Device, &allocInfo, m_DescriptorSets.data()) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to allocate descriptor sets!");
-	}
-}
-
-void Application::UpdateDescriptorSets()
-{
-	const std::vector<DataBuffer>& cameraBuffers{ m_Camera.GetUniformBuffers() };
-
-	VkDescriptorImageInfo imageInfo{};
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = m_Texture.GetImageView().GetVkImageView();
-	imageInfo.sampler = m_TextureSampler.GetVkSampler();
-
-	for (size_t frameIdx{}; frameIdx < g_MaxFramesInFlight; ++frameIdx)
-	{
-		VkDescriptorBufferInfo cameraBufferInfo{};
-		cameraBufferInfo.buffer = cameraBuffers[frameIdx].GetVkBuffer();
-		cameraBufferInfo.offset = 0;
-		cameraBufferInfo.range = sizeof(CameraUBO);
-
-		std::array<VkWriteDescriptorSet, 2>descriptorWrites{};
-
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = m_DescriptorSets[frameIdx];
-		descriptorWrites[1].dstBinding = 0;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pBufferInfo = &cameraBufferInfo;
-
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = m_DescriptorSets[frameIdx];
-		descriptorWrites[0].dstBinding = 1;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pImageInfo = &imageInfo;
-
-		vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 }
 
@@ -793,42 +705,4 @@ void Application::CreateScenes()
 	models3D.emplace_back(std::move(model6));
 
 	m_GraphicsPipeline3D.SetScene(std::move(models3D));
-}
-
-void Application::CreateDepthResources()
-{
-	VkFormat depthFormat{ FindDepthFormat() };
-
-	m_DepthImage.Initialize(m_Device, m_PhysicalDevice, m_SwapChainExtent.width, m_SwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	m_DepthImageView.Initialize(m_Device, m_DepthImage.GetVkImage(), depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-	m_DepthImage.TransitionImageLayout(m_Device, m_CommandPool, m_GraphicsQueue, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-}
-
-VkFormat Application::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
-{
-	for (const VkFormat& format : candidates)
-	{
-		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, format, &props);
-
-		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) return format;
-		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) return format;
-	}
-
-	throw std::runtime_error("failed to find supported format!");
-}
-
-VkFormat Application::FindDepthFormat()
-{
-	return FindSupportedFormat(
-		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-	);
-}
-
-bool Application::HasStencilComponent(VkFormat format)
-{
-	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }

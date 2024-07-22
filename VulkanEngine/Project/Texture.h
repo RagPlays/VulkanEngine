@@ -7,6 +7,7 @@
 
 #include "Image.h"
 #include "ImageView.h"
+#include "Sampler.h"
 
 class CommandPool;
 
@@ -20,8 +21,12 @@ public:
 	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, const CommandPool& cmndPl, VkQueue queue, const std::string& filePath);
 	void Destroy(VkDevice device);
 
+	const VkImage& GetVkImage() const;
 	const Image& GetImage() const;
+	const VkImageView& GetVkImageView() const;
 	const ImageView& GetImageView() const;
+	const VkSampler& GetVkSampler() const;
+	const Sampler& GetSampler() const;
 
 private:
 
@@ -32,6 +37,7 @@ private:
 
 	Image m_Image;
 	ImageView m_ImageView;
+	Sampler m_TextureSampler;
 
 };
 

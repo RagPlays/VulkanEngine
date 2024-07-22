@@ -20,7 +20,7 @@ public:
 	VulkanInstance() = default;
 	~VulkanInstance() = default;
 
-	void Initialize(const std::string& appName, const std::string& engineName, GLFWwindow* window);
+	void Initialize(GLFWwindow* window);
 	void Destroy();
 
 	bool GetValidationLayersEnabled() const;
@@ -59,6 +59,9 @@ private:
 
 	static const std::vector<const char*> s_DeviceExtensions;
 	static const std::vector<const char*> s_ValidationLayers;
+
+	static const std::string s_AppName;
+	static const std::string s_EngineName;
 };
 
 #endif // !VULKANINSTANCE_H

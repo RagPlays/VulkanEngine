@@ -6,9 +6,16 @@
 #include "VulkanUtils.h"
 #include "VulkanStructs.h"
 
-void GraphicsPipeline3D::Initialize(const GraphicsPipelineConfigs& configs)
+#include "Camera.h"
+#include "Texture.h"
+
+void GraphicsPipeline3D::Initialize(const GraphicsPipelineConfigs& configs, Texture* pTex, Camera* pCam)
 {
 	CreateDescriptorSetLayout(configs.device);
+	CreateDescriptorPool(configs.device);
+	AllocateDescriptorSets(configs.device);
+	UpdateDescriptorSets(configs.device, pTex, pCam);
+
 	CreatePipelineLayout(configs.device);
 	CreatePipeline(configs.device, configs.shaderConfigs, configs.swapchainExtent, configs.renderPass);
 }
@@ -16,6 +23,8 @@ void GraphicsPipeline3D::Initialize(const GraphicsPipelineConfigs& configs)
 void GraphicsPipeline3D::Destroy(VkDevice device)
 {
 	vkDestroyDescriptorSetLayout(device, m_VkDescriptorSetLayout, nullptr);
+	vkFreeDescriptorSets(device, m_DescriptorPool, static_cast<uint32_t>(m_DescriptorSets.size()), m_DescriptorSets.data());
+	vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
 
 	m_Scene.Destroy(device);
 
@@ -28,6 +37,15 @@ void GraphicsPipeline3D::Draw(VkCommandBuffer commandBuffer, VkDescriptorSet des
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipeline);
 
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+	m_Scene.Draw(commandBuffer, m_VkPipelineLayout);
+}
+
+void GraphicsPipeline3D::Draw(VkCommandBuffer commandBuffer, uint32_t currentFrame) const
+{
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipeline);
+
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, nullptr);
 
 	m_Scene.Draw(commandBuffer, m_VkPipelineLayout);
 }
@@ -72,6 +90,83 @@ void GraphicsPipeline3D::CreateDescriptorSetLayout(VkDevice device)
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_VkDescriptorSetLayout) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create descriptor set layout!");
+	}
+}
+
+void GraphicsPipeline3D::CreateDescriptorPool(VkDevice device)
+{
+	std::array<VkDescriptorPoolSize, 2> poolSizes{};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
+	poolSizes[0].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
+
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+	poolInfo.pPoolSizes = poolSizes.data();
+	poolInfo.maxSets = static_cast<uint32_t>(g_MaxFramesInFlight);
+	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create descriptor pool!");
+	}
+}
+
+void GraphicsPipeline3D::AllocateDescriptorSets(VkDevice device)
+{
+	std::vector<VkDescriptorSetLayout> layouts{ g_MaxFramesInFlight, GetDescriptorSetLayout() };
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = m_DescriptorPool;
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+	allocInfo.pSetLayouts = layouts.data();
+
+	m_DescriptorSets.resize(layouts.size());
+
+	if (vkAllocateDescriptorSets(device, &allocInfo, m_DescriptorSets.data()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to allocate descriptor sets!");
+	}
+}
+
+void GraphicsPipeline3D::UpdateDescriptorSets(VkDevice device, Texture* pTex, Camera* pCam)
+{
+	const std::vector<DataBuffer>& cameraBuffers{ pCam->GetUniformBuffers() };
+
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageInfo.imageView = pTex->GetVkImageView();
+	imageInfo.sampler = pTex->GetVkSampler();
+
+	for (size_t frameIdx{}; frameIdx < g_MaxFramesInFlight; ++frameIdx)
+	{
+		VkDescriptorBufferInfo cameraBufferInfo{};
+		cameraBufferInfo.buffer = cameraBuffers[frameIdx].GetVkBuffer();
+		cameraBufferInfo.offset = 0;
+		cameraBufferInfo.range = sizeof(CameraUBO);
+
+		std::array<VkWriteDescriptorSet, 2>descriptorWrites{};
+
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = m_DescriptorSets[frameIdx];
+		descriptorWrites[1].dstBinding = 0;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pBufferInfo = &cameraBufferInfo;
+
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = m_DescriptorSets[frameIdx];
+		descriptorWrites[0].dstBinding = 1;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pImageInfo = &imageInfo;
+
+		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 }
 
