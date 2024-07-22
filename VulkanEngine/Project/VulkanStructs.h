@@ -4,6 +4,7 @@
 #include <optional>
 #include <vector>
 #include <array>
+#include <string>
 
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
@@ -13,6 +14,27 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+
+struct ShaderConfig
+{
+	std::string filePath{};
+	std::string entryPoint{};
+	VkShaderStageFlagBits stage{};
+};
+
+struct ShadersConfigs
+{
+	ShaderConfig vertShaderConfig{};
+	ShaderConfig fragShaderConfig{};
+};
+
+struct GraphicsPipelineConfigs
+{
+	VkDevice device;
+	ShadersConfigs shaderConfigs;
+	VkExtent2D swapchainExtent;
+	VkRenderPass renderPass;
+};
 
 struct QueueFamilyIndices
 {

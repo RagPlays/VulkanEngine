@@ -6,18 +6,7 @@
 
 #include <vulkan/vulkan.h>
 
-struct ShaderConfig
-{
-    std::string filePath{};
-    std::string entryPoint{};
-    VkShaderStageFlagBits stage{};
-};
-
-struct ShadersConfigs
-{
-    ShaderConfig vertShaderConfig{};
-    ShaderConfig fragShaderConfig{};
-};
+struct ShaderConfig;
 
 class Shader final
 {

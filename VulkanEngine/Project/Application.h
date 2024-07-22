@@ -79,19 +79,17 @@ private:
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	// Graphics Pipeline
-	void CreateGraphicsPipelines();
+	void CreateGraphicsPipeline2D();
+	void CreateGraphicsPipeline3D();
 
 	// Command Pool
 	void CreateCommandPool();
-	void CreateCommandBuffer();
+	void CreateCommandBuffers();
 
 	// DescriptorPool
 	void CreateDescriptorPool();
 	void AllocateDescriptorSets();
 	void UpdateDescriptorSets();
-
-	// TextureSampler
-	void CreateTextureSampler();
 
 	// Scene
 	void CreateScenes();
@@ -144,7 +142,7 @@ private:
 	SyncObjects m_SyncObjects;
 
 	// Frames in flight
-	uint32_t m_CurrentFrame{ 0 };
+	uint32_t m_CurrentFrame;
 
 	// DescriptorPool
 	VkDescriptorPool m_DescriptorPool;

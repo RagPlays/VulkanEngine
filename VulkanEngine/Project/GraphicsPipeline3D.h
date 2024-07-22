@@ -8,18 +8,7 @@ class CommandPool;
 struct ShaderConfig;
 struct ShadersConfigs;
 
-struct DescriptorRequirements
-{
-	uint32_t uniformBufferCount;
-	uint32_t combinedImageSamplerCount;
-
-	DescriptorRequirements& operator+=(const DescriptorRequirements& other)
-	{
-		this->uniformBufferCount += other.uniformBufferCount;
-		this->combinedImageSamplerCount += other.combinedImageSamplerCount;
-		return *this;
-	}
-};
+struct GraphicsPipelineConfigs;
 
 class GraphicsPipeline3D final
 {
@@ -33,7 +22,7 @@ public:
 	GraphicsPipeline3D& operator=(const GraphicsPipeline3D& other) = delete;
 	GraphicsPipeline3D& operator=(GraphicsPipeline3D&& other) noexcept = delete;
 
-	void Initialize(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
+	void Initialize(const GraphicsPipelineConfigs& configs);
 	void Destroy(VkDevice device);
 
 	void Draw(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet) const;
@@ -46,6 +35,7 @@ public:
 private:
 
 	void CreateDescriptorSetLayout(VkDevice device);
+
 	void CreatePipelineLayout(VkDevice device);
 	void CreatePipeline(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
 
@@ -55,6 +45,7 @@ private:
 	VkPipeline m_VkPipeline;
 	VkPipelineLayout m_VkPipelineLayout;
 
+	// Descritor
 	VkDescriptorSetLayout m_VkDescriptorSetLayout;
 
 	// Scene

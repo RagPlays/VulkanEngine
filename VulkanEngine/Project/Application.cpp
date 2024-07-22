@@ -12,7 +12,7 @@ void Application::InitVulkan()
 {
 	m_Window.Initialize();
 
-	m_VulkanInstance.Initialize("VulkanEngine", "MorrogEngine", m_Window.GetWindow());
+	m_VulkanInstance.Initialize(g_AppName, g_EngineName, m_Window.GetWindow());
 	m_Surface.Initialize(m_VulkanInstance.GetVkInstance(), m_Window.GetWindow());
 
 	PickPhysicalDevice();
@@ -23,24 +23,26 @@ void Application::InitVulkan()
 	
 	m_RenderPass.Initialize(m_Device, m_SwapChainImageFormat, FindDepthFormat());
 
-	CreateGraphicsPipelines();
-
 	CreateCommandPool();
+	CreateCommandBuffers();
+
+	// Texture
+	m_Texture.Initialize(m_Device, m_PhysicalDevice, m_CommandPool, m_GraphicsQueue, g_TexturePath1);
+	m_TextureSampler.Initialize(m_Device, m_PhysicalDevice);
+
+	// Camera
+	m_Camera.Initialize(m_Device, m_PhysicalDevice, m_Window.GetAspectRatio(), m_Window.GetWindow());
 
 	CreateDepthResources();
 	CreateFramebuffers();
 
-	m_Texture.Initialize(m_Device, m_PhysicalDevice, m_CommandPool, m_GraphicsQueue, g_TexturePath1);
-	CreateTextureSampler();
-
+	CreateGraphicsPipeline2D();
+	CreateGraphicsPipeline3D();
 	CreateScenes();
-	m_Camera.Initialize(m_Device, m_PhysicalDevice, m_Window.GetAspectRatio(), m_Window.GetWindow());
 
 	CreateDescriptorPool();
 	AllocateDescriptorSets();
 	UpdateDescriptorSets();
-
-	CreateCommandBuffer();
 
 	m_SyncObjects.Initialize(m_Device);
 }
@@ -575,7 +577,7 @@ VkExtent2D Application::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabil
 	}
 }
 
-void Application::CreateGraphicsPipelines()
+void Application::CreateGraphicsPipeline2D()
 {
 	const VkRenderPass& renderPass{ m_RenderPass.GetVkRenderPass() };
 
@@ -595,7 +597,18 @@ void Application::CreateGraphicsPipelines()
 
 	const ShadersConfigs shaderConfigs2D{ vertShaderConfig2D, fragShaderConfig2D };
 
-	m_GraphicsPipeline2D.Initialize(m_Device, shaderConfigs2D, m_SwapChainExtent, m_RenderPass.GetVkRenderPass());
+	GraphicsPipelineConfigs configs{};
+	configs.device = m_Device;
+	configs.shaderConfigs = shaderConfigs2D;
+	configs.swapchainExtent = m_SwapChainExtent;
+	configs.renderPass = renderPass;
+
+	m_GraphicsPipeline2D.Initialize(configs);
+}
+
+void Application::CreateGraphicsPipeline3D()
+{
+	const VkRenderPass& renderPass{ m_RenderPass.GetVkRenderPass() };
 
 	const ShaderConfig vertShaderConfig3D
 	{
@@ -613,7 +626,13 @@ void Application::CreateGraphicsPipelines()
 
 	const ShadersConfigs shaderConfigs3D{ vertShaderConfig3D, fragShaderConfig3D };
 
-	m_GraphicsPipeline3D.Initialize(m_Device, shaderConfigs3D, m_SwapChainExtent, renderPass);
+	GraphicsPipelineConfigs configs{};
+	configs.device = m_Device;
+	configs.shaderConfigs = shaderConfigs3D;
+	configs.swapchainExtent = m_SwapChainExtent;
+	configs.renderPass = renderPass;
+
+	m_GraphicsPipeline3D.Initialize(configs);
 }
 
 void Application::CreateCommandPool()
@@ -622,7 +641,7 @@ void Application::CreateCommandPool()
 	m_CommandPool.Initialize(m_Device, queueFamilyIndices);
 }
 
-void Application::CreateCommandBuffer()
+void Application::CreateCommandBuffers()
 {
 	m_CommandBuffers.resize(g_MaxFramesInFlight);
 
@@ -707,11 +726,6 @@ void Application::UpdateDescriptorSets()
 
 		vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
-}
-
-void Application::CreateTextureSampler()
-{
-	m_TextureSampler.Initialize(m_Device, m_PhysicalDevice);
 }
 
 void Application::CreateScenes()

@@ -7,6 +7,9 @@
 
 #include <vulkan/vulkan.h>
 
+const std::string g_AppName{ "VulkanEngine" };
+const std::string g_EngineName{ "MorrogEngine" };
+
 const int g_MaxFramesInFlight{ 2 };
 
 const std::string g_Model3DPath1{ "Resources/Models/viking_room.obj" };

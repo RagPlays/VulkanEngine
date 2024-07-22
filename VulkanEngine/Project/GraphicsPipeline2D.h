@@ -5,10 +5,11 @@
 
 #include "Scene.h"
 #include "RenderPass.h"
+#include "Shader.h"
 
 class CommandPool;
 
-struct ShadersConfigs;
+struct GraphicsPipelineConfigs;
 
 class GraphicsPipeline2D final
 {
@@ -22,7 +23,7 @@ public:
 	GraphicsPipeline2D& operator=(const GraphicsPipeline2D& other) = delete;
 	GraphicsPipeline2D& operator=(GraphicsPipeline2D&& other) noexcept = delete;
 
-	void Initialize(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
+	void Initialize(const GraphicsPipelineConfigs& configs);
 	void Destroy(VkDevice device);
 
 	void Draw(VkCommandBuffer commandBuffer);

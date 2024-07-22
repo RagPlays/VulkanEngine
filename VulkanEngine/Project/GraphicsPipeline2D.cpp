@@ -3,11 +3,12 @@
 #include "GraphicsPipeline2D.h"
 
 #include "Shader.h"
+#include "VulkanStructs.h"
 
-void GraphicsPipeline2D::Initialize(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass)
+void GraphicsPipeline2D::Initialize(const GraphicsPipelineConfigs& configs)
 {
-	CreatePipelineLayout(device);
-	CreatePipeline(device, shaderConfigs, swapchainExtent, renderPass);
+	CreatePipelineLayout(configs.device);
+	CreatePipeline(configs.device, configs.shaderConfigs, configs.swapchainExtent, configs.renderPass);
 }
 
 void GraphicsPipeline2D::Destroy(VkDevice device)

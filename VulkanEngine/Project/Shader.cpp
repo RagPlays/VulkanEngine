@@ -2,6 +2,7 @@
 
 #include "Shader.h"
 #include "VulkanUtils.h"
+#include "VulkanStructs.h"
 #include "Vertex.h"
 
 Shader::Shader()
