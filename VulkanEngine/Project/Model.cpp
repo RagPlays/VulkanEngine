@@ -68,7 +68,7 @@ void Model2D::SetScale(float scale)
 
 void Model2D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const
 {
-    //vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Model2DUBO), &m_ModelMatrix);
+    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelUBO), &m_ModelMatrix);
 
     m_VertexBuffer.BindAsVertexBuffer(commandBuffer);
     m_IndexBuffer.BindAsIndexBuffer(commandBuffer);
@@ -226,7 +226,7 @@ void Model3D::SetTranform(const Transform3D& transform)
 
 void Model3D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const
 {
-    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Model3DUBO), &m_ModelMatrix);
+    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelUBO), &m_ModelMatrix);
 
     m_VertexBuffer.BindAsVertexBuffer(commandBuffer);
     m_IndexBuffer.BindAsIndexBuffer(commandBuffer);

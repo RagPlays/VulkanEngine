@@ -1,8 +1,8 @@
 #version 450
 
-layout(push_constant) uniform ModelUBO
+layout(push_constant) uniform Model2DUBO
 {
-    mat3 model;
+    mat4 model;
 } modelUBO;
 
 layout(location = 0) in vec2 inPosition;
@@ -12,8 +12,7 @@ layout(location = 0) out vec3 fragColor;
 
 void main()
 {
-    vec3 localPosition = vec3(inPosition, 0.0);   
-    vec3 transformedPosition = modelUBO.model * localPosition;
+    vec3 transformedPosition = (modelUBO.model * vec4(inPosition, 0.0, 1.0)).xyz;
     gl_Position = vec4(transformedPosition.xy, 0.0, 1.0);
 
     fragColor = inColor;

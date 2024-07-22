@@ -42,7 +42,7 @@ private:
 private:
 
 	Transform2D m_Transform;
-	Model2DUBO m_ModelMatrix;
+	ModelUBO m_ModelMatrix;
 	uint32_t m_NrIndices;
 	DataBuffer m_VertexBuffer;
 	DataBuffer m_IndexBuffer;
@@ -78,7 +78,7 @@ private:
 private:
 
 	Transform3D m_Transform;
-	Model3DUBO m_ModelMatrix;
+	ModelUBO m_ModelMatrix;
 	uint32_t m_NrIndices;
 	DataBuffer m_VertexBuffer;
 	DataBuffer m_IndexBuffer;

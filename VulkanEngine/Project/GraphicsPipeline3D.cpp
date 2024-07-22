@@ -175,7 +175,7 @@ void GraphicsPipeline3D::CreatePipelineLayout(VkDevice device)
 	VkPushConstantRange pushConstantRange{};
 	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	pushConstantRange.offset = 0;
-	pushConstantRange.size = sizeof(Model3DUBO);
+	pushConstantRange.size = sizeof(ModelUBO);
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

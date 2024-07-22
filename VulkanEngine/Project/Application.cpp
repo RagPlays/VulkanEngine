@@ -658,8 +658,8 @@ void Application::CreateScenes()
 	Model2D model2D1{};
 	model2D1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, vertices, indices);
 	model2D1.SetPosition(glm::vec2{ 0.f, 0.f });
-	model2D1.SetRotation(0);
-	model2D1.SetScale(1.f);
+	model2D1.SetRotation(90);
+	model2D1.SetScale(glm::vec2{ 1.5f, 0.3f });
 
 	models2D.emplace_back(std::move(model2D1));
 

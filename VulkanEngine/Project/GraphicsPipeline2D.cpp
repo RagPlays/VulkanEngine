@@ -36,7 +36,7 @@ void GraphicsPipeline2D::CreatePipelineLayout(VkDevice device)
 	std::array<VkPushConstantRange, 1> pushConstantRange{};
 	pushConstantRange[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	pushConstantRange[0].offset = 0;
-	pushConstantRange[0].size = sizeof(Model2DUBO);
+	pushConstantRange[0].size = sizeof(ModelUBO);
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

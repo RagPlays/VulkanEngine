@@ -1,6 +1,6 @@
 #version 450
 
-layout(push_constant) uniform ModelUBO
+layout(push_constant) uniform Model3DUBO
 {
     mat4 model;
 } modelUBO;
