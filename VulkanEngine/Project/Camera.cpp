@@ -149,13 +149,14 @@ void Camera::UpdateCameraVectors()
     m_Up = glm::vec3{ rollMatrix * glm::vec4{ m_Up, 0.0f } };*/
 
     m_ViewMatrix = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-    m_ProjectionMatrix = glm::perspective(glm::radians(m_FOV), m_AspectRatio, m_Near, m_Far);
-    m_ProjectionMatrix[1][1] *= -1;
+
+    m_PerspectiveProjMatrix = glm::perspective(glm::radians(m_FOV), m_AspectRatio, m_Near, m_Far);
+    m_PerspectiveProjMatrix[1][1] *= -1;
 }
 
 void Camera::UpdateUniformBufferObjects(uint32_t currentFrame)
 {
-    CameraUBO ubo{ m_ViewMatrix, m_ProjectionMatrix };
+    CameraUBO ubo{ m_ViewMatrix, m_PerspectiveProjMatrix };
 
     memcpy(m_UniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }

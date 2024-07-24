@@ -9,7 +9,7 @@
 #include "Camera.h"
 #include "Texture.h"
 
-void GraphicsPipeline3D::Initialize(const GraphicsPipelineConfigs& configs, Texture* pTex, Camera* pCam)
+void GraphicsPipeline3D::Initialize(const GraphicsPipelineConfigs& configs, const Texture& pTex, const Camera& pCam)
 {
 	CreateDescriptorSetLayout(configs.device);
 	CreateDescriptorPool(configs.device);
@@ -32,15 +32,6 @@ void GraphicsPipeline3D::Destroy(VkDevice device)
 	vkDestroyPipelineLayout(device, m_VkPipelineLayout, nullptr);
 }
 
-void GraphicsPipeline3D::Draw(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet) const
-{
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipeline);
-
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
-
-	m_Scene.Draw(commandBuffer, m_VkPipelineLayout);
-}
-
 void GraphicsPipeline3D::Draw(VkCommandBuffer commandBuffer, uint32_t currentFrame) const
 {
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipeline);
@@ -58,11 +49,6 @@ void GraphicsPipeline3D::SetScene(std::vector<Model3D>&& models)
 size_t GraphicsPipeline3D::GetNrOfModels() const
 {
 	return m_Scene.GetNrOfModels();
-}
-
-const VkDescriptorSetLayout& GraphicsPipeline3D::GetDescriptorSetLayout() const
-{
-	return m_VkDescriptorSetLayout;
 }
 
 void GraphicsPipeline3D::CreateDescriptorSetLayout(VkDevice device)
@@ -117,7 +103,7 @@ void GraphicsPipeline3D::CreateDescriptorPool(VkDevice device)
 
 void GraphicsPipeline3D::AllocateDescriptorSets(VkDevice device)
 {
-	std::vector<VkDescriptorSetLayout> layouts{ g_MaxFramesInFlight, GetDescriptorSetLayout() };
+	std::vector<VkDescriptorSetLayout> layouts{ g_MaxFramesInFlight, m_VkDescriptorSetLayout };
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = m_DescriptorPool;
@@ -132,14 +118,14 @@ void GraphicsPipeline3D::AllocateDescriptorSets(VkDevice device)
 	}
 }
 
-void GraphicsPipeline3D::UpdateDescriptorSets(VkDevice device, Texture* pTex, Camera* pCam)
+void GraphicsPipeline3D::UpdateDescriptorSets(VkDevice device, const Texture& pTex, const Camera& pCam)
 {
-	const std::vector<DataBuffer>& cameraBuffers{ pCam->GetUniformBuffers() };
+	const std::vector<DataBuffer>& cameraBuffers{ pCam.GetUniformBuffers() };
 
 	VkDescriptorImageInfo imageInfo{};
 	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = pTex->GetVkImageView();
-	imageInfo.sampler = pTex->GetVkSampler();
+	imageInfo.imageView = pTex.GetVkImageView();
+	imageInfo.sampler = pTex.GetVkSampler();
 
 	for (size_t frameIdx{}; frameIdx < g_MaxFramesInFlight; ++frameIdx)
 	{

@@ -3,25 +3,38 @@
 #include "GraphicsPipeline2D.h"
 
 #include "Shader.h"
+#include "VulkanUtils.h"
 #include "VulkanStructs.h"
+#include "Camera.h"
 
-void GraphicsPipeline2D::Initialize(const GraphicsPipelineConfigs& configs)
+void GraphicsPipeline2D::Initialize(const GraphicsPipelineConfigs& configs, const Camera& pCamera)
 {
+	CreateDescriptorSetLayout(configs.device);
+	CreateDescriptorPool(configs.device);
+	AllocateDescriptorSets(configs.device);
+	UpdateDescriptorSets(configs.device, pCamera);
+
 	CreatePipelineLayout(configs.device);
 	CreatePipeline(configs.device, configs.shaderConfigs, configs.swapchainExtent, configs.renderPass);
 }
 
 void GraphicsPipeline2D::Destroy(VkDevice device)
 {
+	vkDestroyDescriptorSetLayout(device, m_VkDescriptorSetLayout, nullptr);
+	vkFreeDescriptorSets(device, m_DescriptorPool, static_cast<uint32_t>(m_DescriptorSets.size()), m_DescriptorSets.data());
+	vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
+
 	m_Scene.Destroy(device);
 
 	vkDestroyPipeline(device, m_VkPipeline, nullptr);
 	vkDestroyPipelineLayout(device, m_VkPipelineLayout, nullptr);
 }
 
-void GraphicsPipeline2D::Draw(VkCommandBuffer commandBuffer)
+void GraphicsPipeline2D::Draw(VkCommandBuffer commandBuffer, uint32_t currentFrame)
 {
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipeline);
+
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_VkPipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, nullptr);
 
 	m_Scene.Draw(commandBuffer, m_VkPipelineLayout);
 }
@@ -29,6 +42,87 @@ void GraphicsPipeline2D::Draw(VkCommandBuffer commandBuffer)
 void GraphicsPipeline2D::SetScene(std::vector<Model2D>&& models)
 {
 	m_Scene.Initialize(std::move(models));
+}
+
+void GraphicsPipeline2D::CreateDescriptorSetLayout(VkDevice device)
+{
+	VkDescriptorSetLayoutBinding uboLayoutBinding{};
+	uboLayoutBinding.binding = 0;
+	uboLayoutBinding.descriptorCount = 1;
+	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 1> bindings{ uboLayoutBinding };
+	VkDescriptorSetLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+	layoutInfo.pBindings = bindings.data();
+
+	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_VkDescriptorSetLayout) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create descriptor set layout!");
+	}
+}
+
+void GraphicsPipeline2D::CreateDescriptorPool(VkDevice device)
+{
+	std::array<VkDescriptorPoolSize, 1> poolSizes{};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
+	poolSizes[0].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+	poolInfo.pPoolSizes = poolSizes.data();
+	poolInfo.maxSets = static_cast<uint32_t>(g_MaxFramesInFlight);
+	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create descriptor pool!");
+	}
+}
+
+void GraphicsPipeline2D::AllocateDescriptorSets(VkDevice device)
+{
+	std::vector<VkDescriptorSetLayout> layouts{ g_MaxFramesInFlight, m_VkDescriptorSetLayout };
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = m_DescriptorPool;
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+	allocInfo.pSetLayouts = layouts.data();
+
+	m_DescriptorSets.resize(layouts.size());
+
+	if (vkAllocateDescriptorSets(device, &allocInfo, m_DescriptorSets.data()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to allocate descriptor sets!");
+	}
+}
+
+void GraphicsPipeline2D::UpdateDescriptorSets(VkDevice device, const Camera& pCam)
+{
+	const std::vector<DataBuffer>& cameraBuffers{ pCam.GetUniformBuffers() };
+
+	for (size_t frameIdx{}; frameIdx < g_MaxFramesInFlight; ++frameIdx)
+	{
+		VkDescriptorBufferInfo cameraBufferInfo{};
+		cameraBufferInfo.buffer = cameraBuffers[frameIdx].GetVkBuffer();
+		cameraBufferInfo.offset = 0;
+		cameraBufferInfo.range = sizeof(CameraUBO);
+
+		std::array<VkWriteDescriptorSet, 1>descriptorWrites{};
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = m_DescriptorSets[frameIdx];
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pBufferInfo = &cameraBufferInfo;
+
+		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	}
 }
 
 void GraphicsPipeline2D::CreatePipelineLayout(VkDevice device)
@@ -40,8 +134,8 @@ void GraphicsPipeline2D::CreatePipelineLayout(VkDevice device)
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0;
-	pipelineLayoutInfo.pSetLayouts = nullptr;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &m_VkDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRange.size());
 	pipelineLayoutInfo.pPushConstantRanges = pushConstantRange.data();
 
@@ -87,12 +181,12 @@ void GraphicsPipeline2D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	dynamicState.pDynamicStates = dynamicStates.data();
 
 	std::array<VkViewport, 1> viewport{};
-	viewport[0].x = 0.0f;
-	viewport[0].y = 0.0f;
+	viewport[0].x = 0.f;
+	viewport[0].y = 0.f;
 	viewport[0].width = static_cast<float>(swapchainExtent.width);
 	viewport[0].height = static_cast<float>(swapchainExtent.height);
-	viewport[0].minDepth = 0.0f;
-	viewport[0].maxDepth = 1.0f;
+	viewport[0].minDepth = 0.f;
+	viewport[0].maxDepth = 1.f;
 
 	std::array<VkRect2D, 1> scissor{};
 	scissor[0].offset = { 0, 0 };
@@ -125,7 +219,7 @@ void GraphicsPipeline2D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampling.sampleShadingEnable = VK_FALSE;
 	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-	multisampling.minSampleShading = 1.0f; // Optional
+	multisampling.minSampleShading = 1.f; // Optional
 	multisampling.pSampleMask = nullptr; // Optional
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
@@ -146,16 +240,16 @@ void GraphicsPipeline2D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
 	colorBlending.attachmentCount = 1;
 	colorBlending.pAttachments = &colorBlendAttachment;
-	colorBlending.blendConstants[0] = 0.0f; // Optional
-	colorBlending.blendConstants[1] = 0.0f; // Optional
-	colorBlending.blendConstants[2] = 0.0f; // Optional
-	colorBlending.blendConstants[3] = 0.0f; // Optional
+	colorBlending.blendConstants[0] = 0.f; // Optional
+	colorBlending.blendConstants[1] = 0.f; // Optional
+	colorBlending.blendConstants[2] = 0.f; // Optional
+	colorBlending.blendConstants[3] = 0.f; // Optional
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{};
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.depthTestEnable = VK_FALSE;
 	depthStencil.depthWriteEnable = VK_FALSE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+	depthStencil.depthCompareOp = VK_COMPARE_OP_NEVER;
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.stencilTestEnable = VK_FALSE;
 

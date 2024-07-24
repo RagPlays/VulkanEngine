@@ -175,12 +175,12 @@ void Application::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imag
 	renderPassInfo.pClearValues = clearValues.data();
 
 	VkViewport viewport{};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
+	viewport.x = 0.f;
+	viewport.y = 0.f;
 	viewport.width = static_cast<float>(m_SwapChainExtent.width);
 	viewport.height = static_cast<float>(m_SwapChainExtent.height);
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
+	viewport.minDepth = 0.f;
+	viewport.maxDepth = 1.f;
 
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
@@ -199,7 +199,7 @@ void Application::RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imag
 	vkCmdSetScissor(cmndBffr, 0, 1, &scissor);
 
 	m_GraphicsPipeline3D.Draw(cmndBffr, m_CurrentFrame);
-	m_GraphicsPipeline2D.Draw(cmndBffr);
+	m_GraphicsPipeline2D.Draw(cmndBffr, m_CurrentFrame);
 
 	commandBuffer.EndRenderPass();
 
@@ -592,7 +592,7 @@ void Application::CreateGraphicsPipeline2D()
 	configs.swapchainExtent = m_SwapChainExtent;
 	configs.renderPass = renderPass;
 
-	m_GraphicsPipeline2D.Initialize(configs);
+	m_GraphicsPipeline2D.Initialize(configs, m_Camera);
 }
 
 void Application::CreateGraphicsPipeline3D()
@@ -621,7 +621,7 @@ void Application::CreateGraphicsPipeline3D()
 	configs.swapchainExtent = m_SwapChainExtent;
 	configs.renderPass = renderPass;
 
-	m_GraphicsPipeline3D.Initialize(configs, &m_Texture, &m_Camera);
+	m_GraphicsPipeline3D.Initialize(configs, m_Texture, m_Camera);
 }
 
 void Application::CreateCommandPool()
@@ -644,6 +644,8 @@ void Application::CreateScenes()
 {
 	// 2D SCENE //
 	std::vector<Model2D> models2D{};
+
+	// Define the rectangle's vertices and indices
 	const std::vector<Vertex2D> vertices
 	{
 		{{-0.5f, -0.5f}, {0.5f, 0.2f, 0.8f}}, // Purple
@@ -655,14 +657,36 @@ void Application::CreateScenes()
 	{
 		0, 1, 2, 2, 3, 0
 	};
+
+	// Initialize the rectangle model
 	Model2D model2D1{};
 	model2D1.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, vertices, indices);
-	model2D1.SetPosition(glm::vec2{ 0.f, 0.f });
-	model2D1.SetRotation(90);
-	model2D1.SetScale(glm::vec2{ 1.5f, 0.3f });
-
+	model2D1.SetPosition(glm::vec2{ -0.65f, -0.33f });
+	model2D1.SetRotation(0);
+	model2D1.SetScale(0.1f);
 	models2D.emplace_back(std::move(model2D1));
 
+	// Define the triangle's vertices and indices
+	const std::vector<Vertex2D> triangleVertices
+	{
+		{{0.0f, 0.5f}, {1.0f, 0.0f, 0.0f}},  // Top, Red
+		{{-0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},  // Bottom Left, Green
+		{{0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}}   // Bottom Right, Blue
+	};
+	const std::vector<uint32_t> triangleIndices
+	{
+		0, 1, 2
+	};
+
+	// Initialize the triangle model
+	Model2D model2D2{};
+	model2D2.Initialize(m_Device, m_PhysicalDevice, m_GraphicsQueue, m_CommandPool, triangleVertices, triangleIndices);
+	model2D2.SetPosition(glm::vec2{ -0.5f, -0.33f });
+	model2D2.SetRotation(0);
+	model2D2.SetScale(0.1f);
+	models2D.emplace_back(std::move(model2D2));
+
+	// Set the scene
 	m_GraphicsPipeline2D.SetScene(std::move(models2D));
 
 	// 3D SCENE //

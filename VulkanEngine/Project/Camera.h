@@ -61,7 +61,8 @@ private:
     float m_Far;
 
     glm::mat4 m_ViewMatrix{};
-    glm::mat4 m_ProjectionMatrix{};
+    glm::mat4 m_PerspectiveProjMatrix{};
+    glm::mat4 m_OrthoProjMatrix{};
 
     uint32_t m_CurrentFrame;
     std::vector<DataBuffer> m_UniformBuffers;

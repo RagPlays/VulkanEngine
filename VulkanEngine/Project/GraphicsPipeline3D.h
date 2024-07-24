@@ -24,23 +24,21 @@ public:
 	GraphicsPipeline3D& operator=(const GraphicsPipeline3D& other) = delete;
 	GraphicsPipeline3D& operator=(GraphicsPipeline3D&& other) noexcept = delete;
 
-	void Initialize(const GraphicsPipelineConfigs& configs, Texture* pTex, Camera* pCam);
+	void Initialize(const GraphicsPipelineConfigs& configs, const Texture& pTex, const Camera& pCam);
 	void Destroy(VkDevice device);
 
-	void Draw(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet) const;
 	void Draw(VkCommandBuffer commandBuffer, uint32_t currentFrame) const;
 
 	void SetScene(std::vector<Model3D>&& models);
 
 	size_t GetNrOfModels() const;
-	const VkDescriptorSetLayout& GetDescriptorSetLayout() const;
 
 private:
 
 	void CreateDescriptorSetLayout(VkDevice device);
 	void CreateDescriptorPool(VkDevice device);
 	void AllocateDescriptorSets(VkDevice device);
-	void UpdateDescriptorSets(VkDevice device, Texture* pTex, Camera* pCam);
+	void UpdateDescriptorSets(VkDevice device, const Texture& pTex, const Camera& pCam);
 
 	void CreatePipelineLayout(VkDevice device);
 	void CreatePipeline(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);
