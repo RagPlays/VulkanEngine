@@ -5,6 +5,9 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Surface.h"
+#include "VulkanStructs.h"
+
 using MessageCreateInfo = VkDebugUtilsMessengerCreateInfoEXT;
 using MessageSeverity = VkDebugUtilsMessageSeverityFlagBitsEXT;
 using MessageType = VkDebugUtilsMessageTypeFlagsEXT;
@@ -23,28 +26,45 @@ public:
 	void Initialize(GLFWwindow* window);
 	void Destroy();
 
+
+	// Instance
+	const VkInstance& GetVkInstance() const;
 	bool GetValidationLayersEnabled() const;
 
-	static uint32_t GetExtensionCount();
-	static const char* const* GetExtionsionNames();
+	// Surface
+	const VkSurfaceKHR& GetVkSurface() const;
 
-	static uint32_t GetValidationLayersCount();
-	static const char* const* GetValidationLayersNames();
+	// Devices
+	const VkDevice& GetVkDevice() const;
+	const VkPhysicalDevice& GetVkPhysicalDevice() const;
+	const VkQueue& GetGraphicsQueue() const;
+	const VkQueue& GetPresentQueue() const;
+	VkResult DeviceWaitIdle();
 
-	static bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
-
-	const VkInstance& GetVkInstance() const;
+	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
+	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) const;
 
 private:
+
+	void CreateVulkanInstance();
+	void CreateSurface(GLFWwindow* window);
+	void CreateDevices();
 
 	void SetupDebugMessenger();
 	void PopulateDebugMessengerCreateInfo(MessageCreateInfo& createInfo);
 	std::vector<const char*> GetRequiredExtensions();
 	bool CheckValidationLayerSupport();
+	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(MessageSeverity messgSeverity, MessageType messgType, const MessageData* callbakcD, void* pUserData);
 
 	static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const UtilsMessengerCreateInfo* pCreateInfo, const AllocCallbacks* pAllocator, UtilsMessenger* pDebugMessenger);
 	static void DestroyDebugUtilsMessengerEXT(VkInstance instance, UtilsMessenger debugMessenger, const AllocCallbacks* pAllocator);
+
+	// Devices
+	void PickPhysicalDevice();
+	void CreateLogicDevice();
+	bool IsDeviceSuitable(VkPhysicalDevice device);
 
 private:
 
@@ -62,6 +82,15 @@ private:
 
 	static const std::string s_AppName;
 	static const std::string s_EngineName;
+
+	// Surface
+	Surface m_Surface;
+
+	// Devices
+	VkPhysicalDevice m_VkPhysicalDevice;
+	VkDevice m_VkDevice;
+	VkQueue m_GraphicsVkQueue;
+	VkQueue m_PresentVkQueue;
 };
 
 #endif // !VULKANINSTANCE_H

@@ -51,7 +51,7 @@ GLFWwindow* Window::GetWindow() const
 	return m_pWindow;
 }
 
-void Window::GetFramebufferSize(int& width, int& height)
+void Window::GetFramebufferSize(int& width, int& height) const
 {
 	glfwGetFramebufferSize(m_pWindow, &width, &height);
 }

@@ -32,7 +32,7 @@ public:
 
 	GLFWwindow* GetWindow() const;
 
-	void GetFramebufferSize(int& width, int& height);
+	void GetFramebufferSize(int& width, int& height) const;
 
 	void PollEvents() const;
 	void WaitEvents() const;

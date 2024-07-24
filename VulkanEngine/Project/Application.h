@@ -43,6 +43,7 @@
 #include "GraphicsPipeline2D.h"
 #include "GraphicsPipeline3D.h"
 #include "DepthBuffer.h"
+#include "Swapchain.h"
 
 class Application final
 {
@@ -60,24 +61,13 @@ private:
 	void Cleanup();
 
 	void DrawFrame();
-	void RecordCommandBuffer(CommandBuffer commandBuffer, uint32_t imageIndex);
+	void RecordCommandBuffer(uint32_t imageIndex);
 
-	// Phicsical Devices
-	void PickPhysicalDevice();
-	void CreateLogicDevice();
-	bool IsDeviceSuitable(VkPhysicalDevice device);
-	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+	void CleanupWindowResources();
+	void RecreateWindowResources();
 
-	// SwapChain
-	void CreateSwapChain();
-	void RecreateSwapChain();
-	void CreateSwapChainImageViews();
+	// Frame Buffers
 	void CreateFramebuffers();
-	void CleanupSwapChain();
-	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
-	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	// Graphics Pipeline
 	void CreateGraphicsPipeline2D();
@@ -87,32 +77,20 @@ private:
 	void CreateCommandPool();
 	void CreateCommandBuffers();
 
-	// Scene
-	void CreateScenes();
+	// Scenes
+	void Create2DScene();
+	void Create3DScene();
 
 private:
 
 	// Window
 	Window m_Window;
 
-	// Instances And Debug Messeges
+	// Instances(debug messages) & Devices
 	VulkanInstance m_VulkanInstance;
 
-	// Surface
-	Surface m_Surface;
-
-	// Devices
-	VkPhysicalDevice m_PhysicalDevice;
-	VkDevice m_Device;
-	VkQueue m_GraphicsQueue;
-	VkQueue m_PresentQueue;
-
 	// SwapChain
-	VkSwapchainKHR m_SwapChain;
-	std::vector<VkImage> m_SwapChainImages; // All SwapChain Images
-	VkFormat m_SwapChainImageFormat;
-	VkExtent2D m_SwapChainExtent; // SwapChain Image Resolution
-	std::vector<ImageView> m_SwapChainImageViews;
+	Swapchain m_Swapchain;
 
 	// RenderPass
 	RenderPass m_RenderPass;
@@ -122,7 +100,7 @@ private:
 	GraphicsPipeline3D m_GraphicsPipeline3D;
 
 	// Frame Buffers
-	std::vector<VkFramebuffer> m_SwapChainFramebuffers;
+	std::vector<VkFramebuffer> m_FrameBuffers;
 
 	// CommandPool
 	CommandPool m_CommandPool;

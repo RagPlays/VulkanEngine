@@ -17,7 +17,7 @@ public:
 	DepthBuffer() = default;
 	~DepthBuffer() = default;
 
-	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue GraphQueue, const CommandPool& cmndP, uint32_t width, uint32_t height);
+	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue GraphQueue, const CommandPool& cmndP, const VkExtent2D& swapchainExtent);
 	void Destroy(VkDevice device);
 
 	const VkImageView& GetVkImageView() const;
