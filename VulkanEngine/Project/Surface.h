@@ -15,7 +15,7 @@ class Surface final
 {
 public:
 
-	Surface() = default;
+	Surface();
 	~Surface() = default;
 
 	void Initialize(VkInstance instance, GLFWwindow* window);

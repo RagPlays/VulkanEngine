@@ -22,14 +22,31 @@ void GraphicsPipeline3D::Initialize(const GraphicsPipelineConfigs& configs, cons
 
 void GraphicsPipeline3D::Destroy(VkDevice device)
 {
-	vkDestroyDescriptorSetLayout(device, m_VkDescriptorSetLayout, nullptr);
-	vkFreeDescriptorSets(device, m_DescriptorPool, static_cast<uint32_t>(m_DescriptorSets.size()), m_DescriptorSets.data());
-	vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
+	if (m_VkPipelineLayout != VK_NULL_HANDLE)
+	{
+		vkDestroyPipelineLayout(device, m_VkPipelineLayout, nullptr);
+		m_VkPipelineLayout = VK_NULL_HANDLE;
+	}
+
+	if (m_VkPipeline != VK_NULL_HANDLE)
+	{
+		vkDestroyPipeline(device, m_VkPipeline, nullptr);
+		m_VkPipeline = VK_NULL_HANDLE;
+	}
+
+	if (m_DescriptorPool != VK_NULL_HANDLE)
+	{
+		vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
+		m_DescriptorPool = VK_NULL_HANDLE;
+	}
+
+	if (m_VkDescriptorSetLayout != VK_NULL_HANDLE)
+	{
+		vkDestroyDescriptorSetLayout(device, m_VkDescriptorSetLayout, nullptr);
+		m_VkDescriptorSetLayout = VK_NULL_HANDLE;
+	}
 
 	m_Scene.Destroy(device);
-
-	vkDestroyPipeline(device, m_VkPipeline, nullptr);
-	vkDestroyPipelineLayout(device, m_VkPipelineLayout, nullptr);
 }
 
 void GraphicsPipeline3D::Draw(VkCommandBuffer commandBuffer, uint32_t currentFrame) const
@@ -57,14 +74,14 @@ void GraphicsPipeline3D::CreateDescriptorSetLayout(VkDevice device)
 	uboLayoutBinding.binding = 0;
 	uboLayoutBinding.descriptorCount = 1;
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+	uboLayoutBinding.pImmutableSamplers = VK_NULL_HANDLE; // Optional
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
 	samplerLayoutBinding.binding = 1;
 	samplerLayoutBinding.descriptorCount = 1;
 	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.pImmutableSamplers = VK_NULL_HANDLE;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	std::array<VkDescriptorSetLayoutBinding, 2> bindings{ uboLayoutBinding, samplerLayoutBinding };
@@ -73,7 +90,7 @@ void GraphicsPipeline3D::CreateDescriptorSetLayout(VkDevice device)
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 	layoutInfo.pBindings = bindings.data();
 
-	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_VkDescriptorSetLayout) != VK_SUCCESS)
+	if (vkCreateDescriptorSetLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_VkDescriptorSetLayout) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create descriptor set layout!");
 	}
@@ -95,7 +112,7 @@ void GraphicsPipeline3D::CreateDescriptorPool(VkDevice device)
 	poolInfo.maxSets = static_cast<uint32_t>(g_MaxFramesInFlight);
 	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
+	if (vkCreateDescriptorPool(device, &poolInfo, VK_NULL_HANDLE, &m_DescriptorPool) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create descriptor pool!");
 	}
@@ -114,7 +131,7 @@ void GraphicsPipeline3D::AllocateDescriptorSets(VkDevice device)
 
 	if (vkAllocateDescriptorSets(device, &allocInfo, m_DescriptorSets.data()) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to allocate descriptor sets!");
+		throw std::runtime_error{ "failed to allocate descriptor sets!" };
 	}
 }
 
@@ -152,7 +169,7 @@ void GraphicsPipeline3D::UpdateDescriptorSets(VkDevice device, const Texture& pT
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].pImageInfo = &imageInfo;
 
-		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, VK_NULL_HANDLE);
 	}
 }
 
@@ -170,7 +187,7 @@ void GraphicsPipeline3D::CreatePipelineLayout(VkDevice device)
 	pipelineLayoutInfo.pushConstantRangeCount = 1;
 	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_VkPipelineLayout) != VK_SUCCESS)
+	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, VK_NULL_HANDLE, &m_VkPipelineLayout) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
@@ -199,7 +216,7 @@ void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-	auto inputAssembly{ Shader::GetInputAssemblyStateInfo() };
+	const auto inputAssembly{ Shader::GetInputAssemblyStateInfo() };
 
 	std::array<VkDynamicState, 2> dynamicStates
 	{
@@ -251,7 +268,7 @@ void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	multisampling.sampleShadingEnable = VK_FALSE;
 	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 	multisampling.minSampleShading = 1.0f; // Optional
-	multisampling.pSampleMask = nullptr; // Optional
+	multisampling.pSampleMask = VK_NULL_HANDLE; // Optional
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
@@ -303,9 +320,9 @@ void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	pipelineInfo.subpass = 0;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
-	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_VkPipeline) != VK_SUCCESS)
+	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, VK_NULL_HANDLE, &m_VkPipeline) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to create graphics pipeline!");
+		throw std::runtime_error{ "failed to create graphics pipeline!" };
 	}
 
 	vertShader.Destroy(device);

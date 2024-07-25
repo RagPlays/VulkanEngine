@@ -28,14 +28,27 @@ void VulkanInstance::Initialize(GLFWwindow* window)
 void VulkanInstance::Destroy()
 {
 	// Devices
-	vkDestroyDevice(m_VkDevice, nullptr);
+	if (m_VkDevice != VK_NULL_HANDLE)
+	{
+		vkDestroyDevice(m_VkDevice, VK_NULL_HANDLE);
+		m_VkDevice = VK_NULL_HANDLE;
+	}
 
-	// Surface
-	m_Surface.Destroy(m_VulkanInstance);
+	if (m_VulkanInstance != VK_NULL_HANDLE)
+	{
+		// Surface
+		m_Surface.Destroy(m_VulkanInstance);
 
-	// Instance
-	if (m_ValidationLayersEnabled) DestroyDebugUtilsMessengerEXT(m_VulkanInstance, m_DebugMessenger, nullptr);
-	vkDestroyInstance(m_VulkanInstance, nullptr);
+		if (m_DebugMessenger != VK_NULL_HANDLE && m_ValidationLayersEnabled)
+		{
+			DestroyDebugUtilsMessengerEXT(m_VulkanInstance, m_DebugMessenger, VK_NULL_HANDLE);
+		}
+		m_DebugMessenger = VK_NULL_HANDLE;
+
+		// Instance
+		vkDestroyInstance(m_VulkanInstance, VK_NULL_HANDLE);
+		m_VulkanInstance = VK_NULL_HANDLE;
+	}
 }
 
 const VkInstance& VulkanInstance::GetVkInstance() const

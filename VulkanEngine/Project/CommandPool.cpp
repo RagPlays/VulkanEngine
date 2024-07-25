@@ -21,15 +21,19 @@ void CommandPool::Initialize(const VulkanInstance& instance)
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	poolInfo.queueFamilyIndex = queueFamilies.graphicsFamily.value();
 
-	if (vkCreateCommandPool(device, &poolInfo, nullptr, &m_VkCommandPool) != VK_SUCCESS)
+	if (vkCreateCommandPool(device, &poolInfo, VK_NULL_HANDLE, &m_VkCommandPool) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to create command pool!");
+		throw std::runtime_error{ "failed to create command pool!" };
 	}
 }
 
 void CommandPool::Destroy(VkDevice device)
 {
-	vkDestroyCommandPool(device, m_VkCommandPool, nullptr);
+	if (m_VkCommandPool != VK_NULL_HANDLE)
+	{
+		vkDestroyCommandPool(device, m_VkCommandPool, VK_NULL_HANDLE);
+		m_VkCommandPool = VK_NULL_HANDLE;
+	}
 }
 
 CommandBuffer CommandPool::CreateCommandBuffer(VkDevice device, VkCommandBufferLevel level) const
@@ -43,7 +47,7 @@ CommandBuffer CommandPool::CreateCommandBuffer(VkDevice device, VkCommandBufferL
 	VkCommandBuffer vkCommandBuffer{ VK_NULL_HANDLE };
 	if (vkAllocateCommandBuffers(device, &allocInfo, &vkCommandBuffer) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to allocate command buffers!");
+		throw std::runtime_error{ "failed to allocate command buffers!" };
 	}
 
 	return CommandBuffer{ vkCommandBuffer };

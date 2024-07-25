@@ -47,7 +47,11 @@ void Sampler::Initialize(VkDevice device, VkPhysicalDevice phyDevice)
 
 void Sampler::Destroy(VkDevice device)
 {
-	if (m_VkSampler != VK_NULL_HANDLE) vkDestroySampler(device, m_VkSampler, nullptr);
+	if (m_VkSampler != VK_NULL_HANDLE)
+	{
+		vkDestroySampler(device, m_VkSampler, VK_NULL_HANDLE);
+		m_VkSampler = VK_NULL_HANDLE;
+	}
 }
 
 const VkSampler& Sampler::GetVkSampler() const

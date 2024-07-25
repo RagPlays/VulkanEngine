@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <cassert>
 
 #include "CommandBuffer.h"
 #include "CommandPool.h"
@@ -11,11 +12,16 @@ CommandBuffer::CommandBuffer()
 CommandBuffer::CommandBuffer(VkCommandBuffer commandBuffer)
     : m_VkCommandBuffer{ commandBuffer }
 {
+    assert(m_VkCommandBuffer != VK_NULL_HANDLE);
 }
 
 void CommandBuffer::Destroy(VkDevice device, const CommandPool& commandPool)
 {
-    vkFreeCommandBuffers(device, commandPool.GetVkCommandPool(), 1, &m_VkCommandBuffer);
+    if (m_VkCommandBuffer != VK_NULL_HANDLE)
+    {
+        vkFreeCommandBuffers(device, commandPool.GetVkCommandPool(), 1, &m_VkCommandBuffer);
+        m_VkCommandBuffer = VK_NULL_HANDLE;
+    }
 }
 
 const VkCommandBuffer& CommandBuffer::GetVkCommandBuffer() const
@@ -25,7 +31,10 @@ const VkCommandBuffer& CommandBuffer::GetVkCommandBuffer() const
 
 void CommandBuffer::Reset(VkCommandBufferResetFlags flags) const
 {
-    vkResetCommandBuffer(m_VkCommandBuffer, flags);
+    if (vkResetCommandBuffer(m_VkCommandBuffer, flags) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to reset recording command buffer!");
+    }
 }
 
 void CommandBuffer::BeginRecording(VkCommandBufferUsageFlags usage) const

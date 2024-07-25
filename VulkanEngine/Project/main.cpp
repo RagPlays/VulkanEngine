@@ -20,5 +20,9 @@ int main()
         std::cerr << execption.what() << "\n";
         return EXIT_FAILURE;
     }
+    catch (...)
+    {
+        std::cerr << "Error!!\n";
+    }
     return EXIT_SUCCESS;
 }

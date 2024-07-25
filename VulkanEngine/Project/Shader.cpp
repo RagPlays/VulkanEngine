@@ -20,12 +20,9 @@ void Shader::Initialize(VkDevice device, const std::string& filePath, const std:
     m_ShaderStageFlag = stage;
 
     std::vector<char> code{ ReadFile(m_FilePath) };
-    if (code.empty())
-    {
-        throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
-    }
+    if (code.empty()) throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
 
-    m_VkShaderModule = CreateShaderModule(device, code);
+    CreateShaderModule(device, code);
 }
 
 void Shader::Initialize(VkDevice device, const ShaderConfig& shaderConfig)
@@ -40,12 +37,16 @@ void Shader::Initialize(VkDevice device, const ShaderConfig& shaderConfig)
         throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
     }
 
-    m_VkShaderModule = CreateShaderModule(device, code);
+    CreateShaderModule(device, code);
 }
 
 void Shader::Destroy(VkDevice device)
 {
-    vkDestroyShaderModule(device, m_VkShaderModule, nullptr);
+    if (m_VkShaderModule != VK_NULL_HANDLE)
+    {
+        vkDestroyShaderModule(device, m_VkShaderModule, VK_NULL_HANDLE);
+        m_VkShaderModule = VK_NULL_HANDLE;
+    }
 }
 
 VkPipelineShaderStageCreateInfo Shader::GetPipelineShaderStageInfo() const
@@ -58,7 +59,7 @@ VkPipelineShaderStageCreateInfo Shader::GetPipelineShaderStageInfo() const
 
     if (!shaderStageInfo.module)
     {
-        throw std::runtime_error("Shader modules not created correctly!");
+        throw std::runtime_error{ "Shader modules not created correctly!" };
     }
 
     return shaderStageInfo;
@@ -75,20 +76,17 @@ VkPipelineInputAssemblyStateCreateInfo Shader::GetInputAssemblyStateInfo()
     return inputAssembly;
 }
 
-VkShaderModule Shader::CreateShaderModule(VkDevice device, const std::vector<char>& code) const
+void Shader::CreateShaderModule(VkDevice device, const std::vector<char>& code)
 {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-    VkShaderModule shaderModule{};
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+    if (vkCreateShaderModule(device, &createInfo, VK_NULL_HANDLE, &m_VkShaderModule) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to create shader module!");
+        throw std::runtime_error{ "failed to create shader module!" };
     }
-
-    return shaderModule;
 }
 
 std::vector<char> Shader::ReadFile(const std::string& filename) const

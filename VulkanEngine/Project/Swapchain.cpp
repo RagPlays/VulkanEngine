@@ -17,8 +17,13 @@ void Swapchain::Destroy(VkDevice device)
 	{
 		imageview.Destroy(device);
 	}
+	m_ImageViews.clear();
 
-	vkDestroySwapchainKHR(device, m_VkSwapChain, nullptr);
+	if (m_VkSwapChain != VK_NULL_HANDLE)
+	{
+		vkDestroySwapchainKHR(device, m_VkSwapChain, VK_NULL_HANDLE);
+		m_VkSwapChain = VK_NULL_HANDLE;
+	}
 }
 
 const VkSwapchainKHR& Swapchain::GetVkSwapchain() const
@@ -93,14 +98,20 @@ void Swapchain::CreateSwapchain(const VulkanInstance& instance, const Window& wi
 
 	createInfo.oldSwapchain = VK_NULL_HANDLE; // Needed when recreating swapchain (window resizing, etc..)
 
-	if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_VkSwapChain) != VK_SUCCESS)
+	if (vkCreateSwapchainKHR(device, &createInfo, VK_NULL_HANDLE, &m_VkSwapChain) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to create swap chain!");
+		throw std::runtime_error{ "failed to create swap chain!" };
 	}
 
-	vkGetSwapchainImagesKHR(device, m_VkSwapChain, &imageCount, nullptr); // get only size
-	m_VkImages.resize(imageCount); // resize to correct size
-	vkGetSwapchainImagesKHR(device, m_VkSwapChain, &imageCount, m_VkImages.data()); // get swap chain image data
+	if (vkGetSwapchainImagesKHR(device, m_VkSwapChain, &imageCount, VK_NULL_HANDLE) != VK_SUCCESS) // get only size
+	{
+		throw std::runtime_error{ "failed to get swap chain images count!" };
+	}
+	m_VkImages.resize(imageCount);
+	if(vkGetSwapchainImagesKHR(device, m_VkSwapChain, &imageCount, m_VkImages.data()) != VK_SUCCESS) // get swap chain image data
+	{
+		throw std::runtime_error{ "failed to get swap chain images data!" };
+	}
 
 	// Store chosen format and extent
 	m_VkFormat = surfaceFormat.format; // VK_FORMAT_B8G8R8A8_SRGB

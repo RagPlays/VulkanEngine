@@ -57,11 +57,16 @@ void Image::Initialize(VkDevice device, VkPhysicalDevice phyDevice, uint32_t wid
 
 void Image::Destroy(VkDevice device)
 {
-    if (device == VK_NULL_HANDLE) return;
-    if (m_VkImage != VK_NULL_HANDLE) vkDestroyImage(device, m_VkImage, nullptr);
-    if (m_VkImageMemory != VK_NULL_HANDLE) vkFreeMemory(device, m_VkImageMemory, nullptr);
-    m_VkImage = VK_NULL_HANDLE;
-    m_VkImageMemory = VK_NULL_HANDLE;
+    if (m_VkImage != VK_NULL_HANDLE)
+    {
+        vkDestroyImage(device, m_VkImage, VK_NULL_HANDLE);
+        m_VkImage = VK_NULL_HANDLE;
+    }
+    if (m_VkImageMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(device, m_VkImageMemory, VK_NULL_HANDLE);
+        m_VkImageMemory = VK_NULL_HANDLE;
+    }
 }
 
 void Image::TransitionImageLayout(VkDevice device, const CommandPool& commandPool, VkQueue queue, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -97,7 +102,8 @@ void Image::TransitionImageLayout(VkDevice device, const CommandPool& commandPoo
             barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
         }
     }
-    else {
+    else
+    {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
@@ -125,9 +131,7 @@ void Image::TransitionImageLayout(VkDevice device, const CommandPool& commandPoo
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     }
-    else {
-        throw std::invalid_argument("unsupported layout transition!");
-    }
+    else throw std::invalid_argument{ "unsupported layout transition!" };
 
     vkCmdPipelineBarrier
     (
@@ -221,5 +225,5 @@ uint32_t Image::FindMemoryType(VkPhysicalDevice physDevice, uint32_t typeFilter,
         }
     }
 
-    throw std::runtime_error("failed to find suitable memory type!");
+    throw std::runtime_error{ "failed to find suitable memory type!" };
 }

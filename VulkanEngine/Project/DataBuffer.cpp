@@ -40,7 +40,7 @@ void DataBuffer::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkMemor
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = FindMemoryType(phyDevice, memRequirements.memoryTypeBits, prop);
 
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &m_VkBufferMemory) != VK_SUCCESS)
+    if (vkAllocateMemory(device, &allocInfo, VK_NULL_HANDLE, &m_VkBufferMemory) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to allocate vertex buffer memory!");
     }
@@ -50,10 +50,16 @@ void DataBuffer::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkMemor
 
 void DataBuffer::Destroy(VkDevice device)
 {
-    if (m_VkBuffer != VK_NULL_HANDLE) vkDestroyBuffer(device, m_VkBuffer, nullptr);
-    if (m_VkBufferMemory != VK_NULL_HANDLE) vkFreeMemory(device, m_VkBufferMemory, nullptr);
-    m_VkBuffer = VK_NULL_HANDLE;
-    m_VkBufferMemory = VK_NULL_HANDLE;
+    if (m_VkBuffer != VK_NULL_HANDLE)
+    {
+        vkDestroyBuffer(device, m_VkBuffer, VK_NULL_HANDLE);
+        m_VkBuffer = VK_NULL_HANDLE;
+    }
+    if (m_VkBufferMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(device, m_VkBufferMemory, VK_NULL_HANDLE);
+        m_VkBufferMemory = VK_NULL_HANDLE;
+    }
 }
 
 const VkBuffer& DataBuffer::GetVkBuffer() const
@@ -128,5 +134,5 @@ uint32_t DataBuffer::FindMemoryType(VkPhysicalDevice physDevice, uint32_t typeFi
         }
     }
 
-    throw std::runtime_error("failed to find suitable memory type!");
+    throw std::runtime_error{ "failed to find suitable memory type!" };
 }

@@ -25,7 +25,7 @@ public:
 
 private:
 
-    VkShaderModule CreateShaderModule(VkDevice device, const std::vector<char>& code) const;
+    void CreateShaderModule(VkDevice device, const std::vector<char>& code);
 
     std::vector<char> ReadFile(const std::string& filename) const;
 

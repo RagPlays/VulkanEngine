@@ -37,7 +37,11 @@ void Window::Initialize()
 
 void Window::Destroy()
 {
-	glfwDestroyWindow(m_pWindow);
+	if (m_pWindow)
+	{
+		glfwDestroyWindow(m_pWindow);
+		m_pWindow = nullptr;
+	}
 	glfwTerminate();
 }
 

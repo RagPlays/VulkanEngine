@@ -15,15 +15,19 @@ void ImageView::Initialize(VkDevice device, VkImage image, VkFormat format, VkIm
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device, &viewInfo, nullptr, &m_VkImageView) != VK_SUCCESS)
+    if (vkCreateImageView(device, &viewInfo, VK_NULL_HANDLE, &m_VkImageView) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to create texture image view!");
+        throw std::runtime_error{ "failed to create texture image view!" };
     }
 }
 
 void ImageView::Destroy(VkDevice device)
 {
-	if (m_VkImageView != VK_NULL_HANDLE) vkDestroyImageView(device, m_VkImageView, nullptr);
+    if (m_VkImageView != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(device, m_VkImageView, VK_NULL_HANDLE);
+        m_VkImageView = VK_NULL_HANDLE;
+    }
 }
 
 const VkImageView& ImageView::GetVkImageView() const

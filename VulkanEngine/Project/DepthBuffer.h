@@ -29,7 +29,6 @@ private:
 
 	VkFormat FindSupportedFormat(VkPhysicalDevice phyDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat FindDepthFormat(VkPhysicalDevice phyDevice);
-	bool HasStencilComponent(VkFormat format) const;
 
 
 	VkFormat m_DepthFormat;

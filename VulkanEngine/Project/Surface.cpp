@@ -4,17 +4,26 @@
 
 #include "VulkanInstance.h"
 
+Surface::Surface()
+	: m_VkSurface{ VK_NULL_HANDLE }
+{
+}
+
 void Surface::Initialize(VkInstance instance, GLFWwindow* window)
 {
-	if (glfwCreateWindowSurface(instance, window, nullptr, &m_VkSurface) != VK_SUCCESS)
+	if (glfwCreateWindowSurface(instance, window, VK_NULL_HANDLE, &m_VkSurface) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to create window surface!");
+		throw std::runtime_error{ "failed to create window surface!" };
 	}
 }
 
 void Surface::Destroy(VkInstance instance)
 {
-	vkDestroySurfaceKHR(instance, m_VkSurface, nullptr);
+	if (m_VkSurface != VK_NULL_HANDLE)
+	{
+		vkDestroySurfaceKHR(instance, m_VkSurface, VK_NULL_HANDLE);
+		m_VkSurface = VK_NULL_HANDLE;
+	}
 }
 
 const VkSurfaceKHR& Surface::GetVkSurface() const

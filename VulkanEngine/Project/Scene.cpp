@@ -18,6 +18,7 @@ void Scene2D::Destroy(VkDevice device)
 	{
 		model.Destroy(device);
 	}
+	m_Models.clear();
 }
 
 void Scene2D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const
@@ -56,6 +57,7 @@ void Scene3D::Destroy(VkDevice device)
 	{
 		model.Destroy(device);
 	}
+	m_Models.clear();
 }
 
 void Scene3D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const

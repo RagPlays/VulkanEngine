@@ -81,8 +81,11 @@ void RenderPass::Initialize(const VulkanInstance& instance, const Swapchain& swa
 
 void RenderPass::Destroy(VkDevice device)
 {
-	if (m_VkRenderPass != VK_NULL_HANDLE) vkDestroyRenderPass(device, m_VkRenderPass, nullptr);
-	else throw std::exception{ "Cant destoy renderpass" };
+	if (m_VkRenderPass != VK_NULL_HANDLE)
+	{
+		vkDestroyRenderPass(device, m_VkRenderPass, VK_NULL_HANDLE);
+		m_VkRenderPass = VK_NULL_HANDLE;
+	}
 }
 
 const VkRenderPass& RenderPass::GetVkRenderPass() const
