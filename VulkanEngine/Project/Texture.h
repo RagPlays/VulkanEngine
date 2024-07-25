@@ -10,6 +10,7 @@
 #include "Sampler.h"
 
 class CommandPool;
+class VulkanInstance;
 
 class Texture final
 {
@@ -18,7 +19,8 @@ public:
 	Texture();
 	~Texture() = default;
 
-	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, const CommandPool& cmndPl, VkQueue queue, const std::string& filePath);
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndPl, const std::string& filePath);
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndPl, const std::string& filePath, const Sampler& sampler);
 	void Destroy(VkDevice device);
 
 	const VkImage& GetVkImage() const;
@@ -30,7 +32,7 @@ public:
 
 private:
 
-	void InitImage(VkDevice device, VkPhysicalDevice phyDevice, const CommandPool& cmndPl, VkQueue queue, const std::string& filePath, VkFormat imageFormat);
+	void InitImage(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndPl, const std::string& filePath, VkFormat imageFormat);
 	void InitImageView(VkDevice device, VkFormat imageFormat);
 
 private:

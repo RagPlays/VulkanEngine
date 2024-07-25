@@ -1,15 +1,22 @@
 #include <stdexcept>
 
 #include "DepthBuffer.h"
+#include "Swapchain.h"
+#include "VulkanInstance.h"
 
-void DepthBuffer::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue GraphQueue, const CommandPool& cmndP, const VkExtent2D& swapchainExtent)
+void DepthBuffer::Initialize(const VulkanInstance& instance, const CommandPool& commandPool, const Swapchain& swapchain)
 {
+	const VkDevice& device{ instance.GetVkDevice() };
+	const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
+	const VkQueue& graphQ{ instance.GetGraphicsQueue() };
+	const VkExtent2D& swapchainExtent{ swapchain.GetVkExtent() };
+
 	m_DepthFormat = FindDepthFormat(phyDevice);
 
 	m_DepthImage.Initialize(device, phyDevice, swapchainExtent.width, swapchainExtent.height, m_DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	m_DepthImageView.Initialize(device, m_DepthImage.GetVkImage(), m_DepthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-	m_DepthImage.TransitionImageLayout(device, cmndP, GraphQueue, m_DepthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_DepthImage.TransitionImageLayout(device, commandPool, graphQ, m_DepthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 void DepthBuffer::Destroy(VkDevice device)

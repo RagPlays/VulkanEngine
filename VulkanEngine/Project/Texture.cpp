@@ -10,6 +10,7 @@
 
 #include "DataBuffer.h"
 #include "VulkanUtils.h"
+#include "VulkanInstance.h"
 
 Texture::Texture()
 	: m_Image{}
@@ -18,17 +19,39 @@ Texture::Texture()
 {
 }
 
-void Texture::Initialize(VkDevice device, VkPhysicalDevice phyDevice, const CommandPool& cmndPl, VkQueue queue, const std::string& filePath)
+void Texture::Initialize(const VulkanInstance& instance, const CommandPool& cmndPl, const std::string& filePath)
 {
-	const VkFormat imageFormat{ VK_FORMAT_R8G8B8A8_SRGB };
+	const VkDevice& device{ instance.GetVkDevice() };
+	const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
+	const VkQueue& graphQ{ instance.GetGraphicsQueue() };
+
+	constexpr VkFormat imageFormat{ VK_FORMAT_R8G8B8A8_SRGB };
 
 	// Image //
-	InitImage(device, phyDevice, cmndPl, queue, filePath, imageFormat);
+	InitImage(device, phyDevice, graphQ, cmndPl, filePath, imageFormat);
 
 	// ImageView //
 	InitImageView(device, imageFormat);
 
+	// Sampler
 	m_TextureSampler.Initialize(device, phyDevice);
+}
+
+void Texture::Initialize(const VulkanInstance& instance, const CommandPool& cmndPl, const std::string& filePath, const Sampler& sampler)
+{
+	const VkDevice& device{ instance.GetVkDevice() };
+	const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
+	const VkQueue& graphQ{ instance.GetGraphicsQueue() };
+
+	constexpr VkFormat imageFormat{ VK_FORMAT_R8G8B8A8_SRGB };
+
+	// Image //
+	InitImage(device, phyDevice, graphQ, cmndPl, filePath, imageFormat);
+
+	// ImageView //
+	InitImageView(device, imageFormat);
+	m_TextureSampler.Destroy(device);
+	m_TextureSampler = sampler;
 }
 
 void Texture::Destroy(VkDevice device)
@@ -68,23 +91,23 @@ const Sampler& Texture::GetSampler() const
 	return m_TextureSampler;
 }
 
-void Texture::InitImage(VkDevice device, VkPhysicalDevice phyDevice, const CommandPool& cmndPl, VkQueue queue, const std::string& filePath, VkFormat imageFormat)
+void Texture::InitImage(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndPl, const std::string& filePath, VkFormat imageFormat)
 {
 	if (!std::filesystem::exists(filePath))
 	{
 		throw std::runtime_error("Image file does not exist: " + filePath);
 	}
 
-	const VkImageTiling imageTilling{ VK_IMAGE_TILING_OPTIMAL };
-	const VkImageUsageFlags imageUsage{ VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT };
-	const VkMemoryPropertyFlags imageProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
+	constexpr VkImageTiling imageTilling{ VK_IMAGE_TILING_OPTIMAL };
+	constexpr VkImageUsageFlags imageUsage{ VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT };
+	constexpr VkMemoryPropertyFlags imageProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
 
-	const VkImageLayout oldLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
-	const VkImageLayout newerLayout{ VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-	const VkImageLayout newestLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	constexpr VkImageLayout oldLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
+	constexpr VkImageLayout newerLayout{ VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
+	constexpr VkImageLayout newestLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
-	const VkMemoryPropertyFlags stagingBufferProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
-	const VkBufferUsageFlags stagingBufferUsage{ VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
+	constexpr VkMemoryPropertyFlags stagingBufferProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+	constexpr VkBufferUsageFlags stagingBufferUsage{ VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
 
 	int texWidth{};
 	int texHeight{};

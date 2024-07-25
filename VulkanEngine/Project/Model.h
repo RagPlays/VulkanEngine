@@ -13,6 +13,7 @@
 #include "Vertex.h"
 
 class Camera;
+class VulkanInstance;
 
 class Model2D final
 {
@@ -21,8 +22,8 @@ public:
 	Model2D();
 	~Model2D() = default;
 
-	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::string& modelFilePath);
-	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices);
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::string& modelFilePath);
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices);
 	void Destroy(VkDevice device);
 
 	void SetPosition(const glm::vec2& pos);
@@ -35,7 +36,7 @@ public:
 private:
 
 	void LoadModelFromFile(const std::string& filePath, std::vector<Vertex2D>& vertices, std::vector<uint32_t>& indices);
-	void InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices);
+	void InitDataBuffers(const VulkanInstance& instance, const CommandPool& commandPool, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices);
 
 	void UpdateModelMatrix();
 
@@ -56,8 +57,8 @@ public:
 	Model3D();
 	~Model3D() = default;
 
-	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::string& modelFilePath);
-	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices);
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::string& modelFilePath);
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices);
 	void Destroy(VkDevice device);
 
 	void SetPosition(const glm::vec3& position);
@@ -71,7 +72,7 @@ public:
 private:
 
 	void LoadModelFromFile(const std::string& filePath, std::vector<Vertex3D>& vertices, std::vector<uint32_t>& indices);
-	void InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices);
+	void InitDataBuffers(const VulkanInstance& instance, const CommandPool& commandPool, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices);
 
 	void UpdateModelMatrix();
 

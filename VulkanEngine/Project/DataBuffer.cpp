@@ -120,7 +120,9 @@ uint32_t DataBuffer::FindMemoryType(VkPhysicalDevice physDevice, uint32_t typeFi
 
     for (uint32_t idx{}; idx < memProperties.memoryTypeCount; ++idx)
     {
-        if ((typeFilter & (1 << idx)) && (memProperties.memoryTypes[idx].propertyFlags & properties) == properties)
+        if ((typeFilter & (1 << idx)) &&
+            (memProperties.memoryTypes[idx].propertyFlags & properties) == properties
+            )
         {
             return idx;
         }

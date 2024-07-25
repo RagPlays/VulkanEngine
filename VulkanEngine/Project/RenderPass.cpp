@@ -2,16 +2,23 @@
 #include <array>
 
 #include "RenderPass.h"
+#include "VulkanInstance.h"
+#include "Swapchain.h"
+#include "DepthBuffer.h"
 
 RenderPass::RenderPass()
 	: m_VkRenderPass{ VK_NULL_HANDLE }
 {
 }
 
-void RenderPass::Initialize(VkDevice device, VkFormat swapchainImageFormat, VkFormat depthFormat)
+void RenderPass::Initialize(const VulkanInstance& instance, const Swapchain& swapchain, const DepthBuffer& depthBuffer)
 {
+	const VkDevice& device{ instance.GetVkDevice() };
+	const VkFormat& swapchainFormat{ swapchain.GetVkFormat() };
+	const VkFormat& depthFormat{ depthBuffer.GetDepthFormat() };
+
 	VkAttachmentDescription colorAttachment{};
-	colorAttachment.format = swapchainImageFormat;
+	colorAttachment.format = swapchainFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -74,7 +81,8 @@ void RenderPass::Initialize(VkDevice device, VkFormat swapchainImageFormat, VkFo
 
 void RenderPass::Destroy(VkDevice device)
 {
-	vkDestroyRenderPass(device, m_VkRenderPass, nullptr);
+	if (m_VkRenderPass != VK_NULL_HANDLE) vkDestroyRenderPass(device, m_VkRenderPass, nullptr);
+	else throw std::exception{ "Cant destoy renderpass" };
 }
 
 const VkRenderPass& RenderPass::GetVkRenderPass() const

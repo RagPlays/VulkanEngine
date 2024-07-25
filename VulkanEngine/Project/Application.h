@@ -74,7 +74,6 @@ private:
 	void CreateGraphicsPipeline3D();
 
 	// Command Pool
-	void CreateCommandPool();
 	void CreateCommandBuffers();
 
 	// Scenes

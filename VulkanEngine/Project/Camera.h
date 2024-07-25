@@ -16,6 +16,9 @@
 
 #include "DataBuffer.h"
 
+class VulkanInstance;
+class Window;
+
 class Camera
 {
 public:
@@ -23,7 +26,7 @@ public:
     Camera();
     ~Camera() = default;
 
-    void Initialize(VkDevice device, VkPhysicalDevice phyDevice, float aspectRatio, GLFWwindow* window);
+    void Initialize(const VulkanInstance& instance, const Window& window);
     void Destroy(VkDevice device);
 
     void Update(uint32_t currentFrame);

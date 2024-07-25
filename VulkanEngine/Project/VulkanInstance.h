@@ -42,7 +42,9 @@ public:
 	VkResult DeviceWaitIdle();
 
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
+	SwapChainSupportDetails QuerySwapChainSupport() const;
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) const;
+	QueueFamilyIndices FindQueueFamilies() const;
 
 private:
 

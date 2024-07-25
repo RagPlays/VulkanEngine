@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.h"
 
-struct QueueFamilyIndices;
+class VulkanInstance;
 
 class CommandPool
 {
@@ -13,7 +13,7 @@ public:
 	CommandPool();
 	~CommandPool() = default;
 
-	void Initialize(VkDevice device, const QueueFamilyIndices& queue);
+	void Initialize(const VulkanInstance& instance);
 	void Destroy(VkDevice device);
 
 	CommandBuffer CreateCommandBuffer(VkDevice device, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const;

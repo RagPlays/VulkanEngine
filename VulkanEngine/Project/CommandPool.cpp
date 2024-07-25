@@ -1,7 +1,7 @@
 #include <stdexcept>
 
 #include "CommandPool.h"
-
+#include "VulkanInstance.h"
 #include "VulkanStructs.h"
 
 CommandPool::CommandPool()
@@ -9,14 +9,17 @@ CommandPool::CommandPool()
 {
 }
 
-void CommandPool::Initialize(VkDevice device, const QueueFamilyIndices& queue)
+void CommandPool::Initialize(const VulkanInstance& instance)
 {
+	const VkDevice& device{ instance.GetVkDevice() };
+	const QueueFamilyIndices queueFamilies{ instance.FindQueueFamilies() };
+
 	// VK_COMMAND_POOL_CREATE_TRANSIENT_BIT (Hint that command buffers are rerecorded with new commands very often)
 	// VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT (Allow command buffers to be rerecorded individually)
 	VkCommandPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	poolInfo.queueFamilyIndex = queue.graphicsFamily.value();
+	poolInfo.queueFamilyIndex = queueFamilies.graphicsFamily.value();
 
 	if (vkCreateCommandPool(device, &poolInfo, nullptr, &m_VkCommandPool) != VK_SUCCESS)
 	{

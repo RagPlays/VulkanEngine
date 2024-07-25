@@ -10,8 +10,8 @@
 #include <GLFW/glfw3native.h>
 
 // 720p resolution (AR 16:9)
-constexpr uint32_t g_WindowWidth{ 1280 };
-constexpr uint32_t g_WindowHeight{ 720 };
+constexpr uint32_t g_WindowWidth{ 1920 };
+constexpr uint32_t g_WindowHeight{ 1080 };
 
 class Window final
 {

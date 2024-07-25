@@ -7,6 +7,7 @@
 #include "Model.h"
 #include "VulkanUtils.h"
 #include "Camera.h"
+#include "VulkanInstance.h"
 
 // MODEL 2D //
 Model2D::Model2D()
@@ -18,21 +19,21 @@ Model2D::Model2D()
 {
 }
 
-void Model2D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::string& modelFilePath)
+void Model2D::Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::string& modelFilePath)
 {
     m_NrIndices = 0;
     std::vector<Vertex2D> vertices{};
     std::vector<uint32_t> indices{};
 
     LoadModelFromFile(modelFilePath, vertices, indices);
-    InitDataBuffers(device, phyDevice, queue, cmndP, vertices, indices);
+    InitDataBuffers(instance, cmndP, vertices, indices);
     UpdateModelMatrix();
 }
 
-void Model2D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices)
+void Model2D::Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices)
 {
     m_NrIndices = static_cast<uint32_t>(indices.size());
-    InitDataBuffers(device, phyDevice, queue, cmndP, vertices, indices);
+    InitDataBuffers(instance, cmndP, vertices, indices);
     UpdateModelMatrix();
 }
 
@@ -117,42 +118,40 @@ void Model2D::LoadModelFromFile(const std::string& filePath, std::vector<Vertex2
     m_NrIndices = static_cast<uint32_t>(indices.size());
 }
 
-void Model2D::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices)
+void Model2D::InitDataBuffers(const VulkanInstance& instance, const CommandPool& commandPool, const std::vector<Vertex2D>& vertices, const std::vector<uint32_t>& indices)
 {
+    const VkDevice& device{ instance.GetVkDevice() };
+    const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
+    const VkQueue& graphQ{ instance.GetGraphicsQueue() };
+
+    constexpr VkBufferUsageFlags stagingBufferUsage{ VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
+    constexpr VkMemoryPropertyFlags stagingBufferProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+    constexpr VkMemoryPropertyFlags bufferProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
+
     /////// Vertex Buffer ///////
     const VkDeviceSize vertexBufferSize{ sizeof(vertices[0]) * vertices.size() };
+    constexpr VkBufferUsageFlags vertexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT };
 
-    const VkBufferUsageFlags stagingBufferUsage{ VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
-    const VkMemoryPropertyFlags stagingBufferProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
-    const VkMemoryPropertyFlags bufferProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
-
-    // staging buffer //
     DataBuffer stagingVBuffer{};
     stagingVBuffer.Initialize(device, phyDevice, stagingBufferProperties, vertexBufferSize, stagingBufferUsage);
     stagingVBuffer.Upload(device, vertexBufferSize, vertices.data());
 
-    // vertex buffer //
-    const VkBufferUsageFlags vertexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT };
-
     m_VertexBuffer.Initialize(device, phyDevice, bufferProperties, vertexBufferSize, vertexBufferUsage);
-    DataBuffer::CopyBuffer(queue, device, commandPool, stagingVBuffer, m_VertexBuffer, vertexBufferSize);
-
-    stagingVBuffer.Destroy(device);
+    DataBuffer::CopyBuffer(graphQ, device, commandPool, stagingVBuffer, m_VertexBuffer, vertexBufferSize);
 
     /////// Index Buffer ///////
     const VkDeviceSize indexBufferSize{ sizeof(indices[0]) * indices.size() };
+    constexpr VkBufferUsageFlags indexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT };
 
-    // staging buffer //
     DataBuffer stagingIBuffer{};
     stagingIBuffer.Initialize(device, phyDevice, stagingBufferProperties, indexBufferSize, stagingBufferUsage);
     stagingIBuffer.Upload(device, indexBufferSize, indices.data());
 
-    // index buffer //
-    const VkBufferUsageFlags indexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT };
-
     m_IndexBuffer.Initialize(device, phyDevice, bufferProperties, indexBufferSize, indexBufferUsage);
-    DataBuffer::CopyBuffer(queue, device, commandPool, stagingIBuffer, m_IndexBuffer, indexBufferSize);
+    DataBuffer::CopyBuffer(graphQ, device, commandPool, stagingIBuffer, m_IndexBuffer, indexBufferSize);
 
+    // Destroy Staging Buffers //
+    stagingVBuffer.Destroy(device);
     stagingIBuffer.Destroy(device);
 }
 
@@ -171,21 +170,21 @@ Model3D::Model3D()
 {
 }
 
-void Model3D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::string& modelFilePath)
+void Model3D::Initialize(const VulkanInstance& instance, const CommandPool& commandPool, const std::string& modelFilePath)
 {
     m_NrIndices = 0;
     std::vector<Vertex3D> vertices{};
     std::vector<uint32_t> indices{};
 
     LoadModelFromFile(modelFilePath, vertices, indices);
-    InitDataBuffers(device, phyDevice, queue, commandPool, vertices, indices);
+    InitDataBuffers(instance, commandPool, vertices, indices);
     UpdateModelMatrix();
 }
 
-void Model3D::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& cmndP, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices)
+void Model3D::Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices)
 {
     m_NrIndices = static_cast<uint32_t>(indices.size());
-    InitDataBuffers(device, phyDevice, queue, cmndP, vertices, indices);
+    InitDataBuffers(instance, cmndP, vertices, indices);
     UpdateModelMatrix();
 }
 
@@ -282,42 +281,40 @@ void Model3D::LoadModelFromFile(const std::string& filePath, std::vector<Vertex3
     m_NrIndices = static_cast<uint32_t>(indices.size());
 }
 
-void Model3D::InitDataBuffers(VkDevice device, VkPhysicalDevice phyDevice, VkQueue queue, const CommandPool& commandPool, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices)
+void Model3D::InitDataBuffers(const VulkanInstance& instance, const CommandPool& commandPool, const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices)
 {
+    const VkDevice& device{ instance.GetVkDevice() };
+    const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
+    const VkQueue& graphQ{ instance.GetGraphicsQueue() };
+
+    constexpr VkBufferUsageFlags stagingBufferUsage{ VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
+    constexpr VkMemoryPropertyFlags stagingBufferProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+    constexpr VkMemoryPropertyFlags bufferProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
+
     /////// Vertex Buffer ///////
     const VkDeviceSize vertexBufferSize{ sizeof(vertices[0]) * vertices.size() };
+    constexpr VkBufferUsageFlags vertexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT };
 
-    const VkBufferUsageFlags stagingBufferUsage{ VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
-    const VkMemoryPropertyFlags stagingBufferProperties{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
-    const VkMemoryPropertyFlags bufferProperties{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
-
-    // staging buffer //
     DataBuffer stagingVBuffer{};
     stagingVBuffer.Initialize(device, phyDevice, stagingBufferProperties, vertexBufferSize, stagingBufferUsage);
     stagingVBuffer.Upload(device, vertexBufferSize, vertices.data());
 
-    // vertex buffer //
-    const VkBufferUsageFlags vertexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT };
-
     m_VertexBuffer.Initialize(device, phyDevice, bufferProperties, vertexBufferSize, vertexBufferUsage);
-    DataBuffer::CopyBuffer(queue, device, commandPool, stagingVBuffer, m_VertexBuffer, vertexBufferSize);
-
-    stagingVBuffer.Destroy(device);
+    DataBuffer::CopyBuffer(graphQ, device, commandPool, stagingVBuffer, m_VertexBuffer, vertexBufferSize);
 
     /////// Index Buffer ///////
     const VkDeviceSize indexBufferSize{ sizeof(indices[0]) * indices.size() };
+    constexpr VkBufferUsageFlags indexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT };
 
-    // staging buffer //
     DataBuffer stagingIBuffer{};
     stagingIBuffer.Initialize(device, phyDevice, stagingBufferProperties, indexBufferSize, stagingBufferUsage);
     stagingIBuffer.Upload(device, indexBufferSize, indices.data());
 
-    // index buffer //
-    const VkBufferUsageFlags indexBufferUsage{ VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT };
-
     m_IndexBuffer.Initialize(device, phyDevice, bufferProperties, indexBufferSize, indexBufferUsage);
-    DataBuffer::CopyBuffer(queue, device, commandPool, stagingIBuffer, m_IndexBuffer, indexBufferSize);
+    DataBuffer::CopyBuffer(graphQ, device, commandPool, stagingIBuffer, m_IndexBuffer, indexBufferSize);
 
+    // Destroy staging buffers //
+    stagingVBuffer.Destroy(device);
     stagingIBuffer.Destroy(device);
 }
 

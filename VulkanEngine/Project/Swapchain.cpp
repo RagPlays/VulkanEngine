@@ -44,10 +44,9 @@ const std::vector<ImageView>& Swapchain::GetImageViews() const
 void Swapchain::CreateSwapchain(const VulkanInstance& instance, const Window& window)
 {
 	const VkDevice& device{ instance.GetVkDevice() };
-	const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
 	const VkSurfaceKHR& surface{ instance.GetVkSurface() };
 
-	SwapChainSupportDetails swapChainSupport{ instance.QuerySwapChainSupport(phyDevice) };
+	SwapChainSupportDetails swapChainSupport{ instance.QuerySwapChainSupport() };
 
 	VkSurfaceFormatKHR surfaceFormat{ ChooseSwapSurfaceFormat(swapChainSupport.formats) };
 	VkPresentModeKHR presentMode{ ChooseSwapPresentMode(swapChainSupport.presentModes) };
@@ -59,7 +58,7 @@ void Swapchain::CreateSwapchain(const VulkanInstance& instance, const Window& wi
 		imageCount = swapChainSupport.capabilities.maxImageCount;
 	}
 
-	QueueFamilyIndices indices{ instance.FindQueueFamilies(phyDevice) };
+	QueueFamilyIndices indices{ instance.FindQueueFamilies() };
 	uint32_t queueFamilyIndices[]{ indices.graphicsFamily.value(), indices.presentFamily.value() };
 
 	VkSwapchainCreateInfoKHR createInfo{};

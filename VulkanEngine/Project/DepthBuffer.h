@@ -9,6 +9,8 @@
 #include "ImageView.h"
 
 class CommandPool;
+class VulkanInstance;
+class Swapchain;
 
 class DepthBuffer final
 {
@@ -17,7 +19,7 @@ public:
 	DepthBuffer() = default;
 	~DepthBuffer() = default;
 
-	void Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkQueue GraphQueue, const CommandPool& cmndP, const VkExtent2D& swapchainExtent);
+	void Initialize(const VulkanInstance& instance, const CommandPool& commandPool, const Swapchain& swapchain);
 	void Destroy(VkDevice device);
 
 	const VkImageView& GetVkImageView() const;

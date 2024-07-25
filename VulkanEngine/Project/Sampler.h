@@ -7,7 +7,7 @@ class Sampler final
 {
 public:
 
-	Sampler() = default;
+	Sampler();
 	~Sampler() = default;
 
 	void Initialize(VkDevice device, VkPhysicalDevice phyDevice);

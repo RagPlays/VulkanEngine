@@ -10,6 +10,8 @@
 #include "VulkanStructs.h"
 #include "VulkanUtils.h"
 #include "Timer.h"
+#include "Window.h"
+#include "VulkanInstance.h"
 
 Camera::Camera()
     : m_Position{ glm::vec3{ 0.f, 2.f, 5.f } }
@@ -26,12 +28,16 @@ Camera::Camera()
     UpdateCameraVectors();
 }
 
-void Camera::Initialize(VkDevice device, VkPhysicalDevice phyDevice, float aspectRatio, GLFWwindow* window)
+void Camera::Initialize(const VulkanInstance& instance, const Window& window)
 {
+    const VkDevice& device{ instance.GetVkDevice() };
+    const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
+    const float aspectRatio{ window.GetAspectRatio() };
+
     m_FOV = 45.f;
     m_Near = 0.1f;
     m_Far = 100.f;
-    m_Window = window;
+    m_Window = window.GetWindow();
     m_AspectRatio = aspectRatio;
 
     UpdateCameraVectors();

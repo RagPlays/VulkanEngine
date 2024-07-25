@@ -20,18 +20,18 @@ void Application::InitVulkan()
 
 	m_Swapchain.Initialize(m_VulkanInstance, m_Window);
 
-	CreateCommandPool();
+	m_CommandPool.Initialize(m_VulkanInstance);
 	CreateCommandBuffers();
 
-	m_DepthBuffer.Initialize(device, phyDevice, graphQ, m_CommandPool, m_Swapchain.GetVkExtent());
+	m_DepthBuffer.Initialize(m_VulkanInstance, m_CommandPool, m_Swapchain);
 
-	m_RenderPass.Initialize(device, m_Swapchain.GetVkFormat(), m_DepthBuffer.GetDepthFormat());
+	m_RenderPass.Initialize(m_VulkanInstance, m_Swapchain, m_DepthBuffer);
 
 	CreateFramebuffers();
 
-	m_Texture.Initialize(device, phyDevice, m_CommandPool, graphQ, g_TexturePath1);
+	m_Texture.Initialize(m_VulkanInstance, m_CommandPool, g_TexturePath1);
 
-	m_Camera.Initialize(device, phyDevice, m_Window.GetAspectRatio(), m_Window.GetWindow());
+	m_Camera.Initialize(m_VulkanInstance, m_Window);
 
 	CreateGraphicsPipeline2D();
 	CreateGraphicsPipeline3D();
@@ -165,9 +165,11 @@ void Application::DrawFrame()
 void Application::RecordCommandBuffer(uint32_t imageIndex)
 {
 	const VkExtent2D& swapchainExtent{ m_Swapchain.GetVkExtent() };
+	CommandBuffer& comndBffr{ m_CommandBuffers[m_CurrentFrame] };
+	const VkCommandBuffer& VkCmndBffr{ comndBffr.GetVkCommandBuffer() };
 
 	std::array<VkClearValue, 2> clearValues{};
-	clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+	clearValues[0].color = { {0.025f, 0.025f, 0.025f, 1.0f} };
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	VkRenderPassBeginInfo renderPassInfo{};
@@ -191,22 +193,19 @@ void Application::RecordCommandBuffer(uint32_t imageIndex)
 	scissor.offset = { 0, 0 };
 	scissor.extent = swapchainExtent;
 
-	CommandBuffer& comndBffr{ m_CommandBuffers[m_CurrentFrame] };
-	const VkCommandBuffer& VkCmndBffr{ comndBffr.GetVkCommandBuffer() };
-
 	comndBffr.Reset();
 
 	comndBffr.BeginRecording();
 
 	comndBffr.BeginRenderPass(renderPassInfo);
+	{
+		vkCmdSetViewport(VkCmndBffr, 0, 1, &viewport);
 
-	vkCmdSetViewport(VkCmndBffr, 0, 1, &viewport);
+		vkCmdSetScissor(VkCmndBffr, 0, 1, &scissor);
 
-	vkCmdSetScissor(VkCmndBffr, 0, 1, &scissor);
-
-	m_GraphicsPipeline3D.Draw(VkCmndBffr, m_CurrentFrame);
-	m_GraphicsPipeline2D.Draw(VkCmndBffr, m_CurrentFrame);
-
+		m_GraphicsPipeline3D.Draw(VkCmndBffr, m_CurrentFrame);
+		m_GraphicsPipeline2D.Draw(VkCmndBffr, m_CurrentFrame);
+	}
 	comndBffr.EndRenderPass();
 
 	comndBffr.EndRecording();
@@ -223,24 +222,11 @@ void Application::CleanupWindowResources()
 		vkDestroyFramebuffer(device, framebuffer, nullptr);
 	}
 
-	// Swapchain
 	m_Swapchain.Destroy(device);
-
-	/*for (auto imageview : m_SwapChainImageViews)
-	{
-		imageview.Destroy(device);
-	}
-
-	vkDestroySwapchainKHR(device, m_SwapChain, nullptr);*/
 }
 
 void Application::RecreateWindowResources()
 {
-	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
-	const VkPhysicalDevice& phyDevice{ m_VulkanInstance.GetVkPhysicalDevice() };
-	const VkQueue& graphQ{ m_VulkanInstance.GetGraphicsQueue() };
-	const VkExtent2D& swapchainExtent{ m_Swapchain.GetVkExtent() };
-
 	// Window minimization handling //
 	int width{};
 	int height{};
@@ -258,14 +244,14 @@ void Application::RecreateWindowResources()
 
 	m_Swapchain.Initialize(m_VulkanInstance, m_Window);
 
-	m_DepthBuffer.Initialize(device, phyDevice, graphQ, m_CommandPool, swapchainExtent);
+	m_DepthBuffer.Initialize(m_VulkanInstance, m_CommandPool, m_Swapchain);
 	CreateFramebuffers();
 }
 
 void Application::CreateFramebuffers()
 {
 	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
-	const std::vector<ImageView> swapchainImageViews{ m_Swapchain.GetImageViews() };
+	const std::vector<ImageView>& swapchainImageViews{ m_Swapchain.GetImageViews() };
 	const VkExtent2D& swapchainExtent{ m_Swapchain.GetVkExtent() };
 
 	m_FrameBuffers.resize(swapchainImageViews.size());
@@ -356,15 +342,6 @@ void Application::CreateGraphicsPipeline3D()
 	m_GraphicsPipeline3D.Initialize(configs, m_Texture, m_Camera);
 }
 
-void Application::CreateCommandPool()
-{
-	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
-	const VkPhysicalDevice& phyDevice{ m_VulkanInstance.GetVkPhysicalDevice() };
-
-	const QueueFamilyIndices queueFamilyIndices{ m_VulkanInstance.FindQueueFamilies(phyDevice) };
-	m_CommandPool.Initialize(device, queueFamilyIndices);
-}
-
 void Application::CreateCommandBuffers()
 {
 	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
@@ -379,10 +356,6 @@ void Application::CreateCommandBuffers()
 
 void Application::Create2DScene()
 {
-	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
-	const VkPhysicalDevice& phyDevice{ m_VulkanInstance.GetVkPhysicalDevice() };
-	const VkQueue& graphQ{ m_VulkanInstance.GetGraphicsQueue() };
-
 	std::vector<Model2D> sceneModels{};
 
 	// Square
@@ -398,7 +371,7 @@ void Application::Create2DScene()
 		0, 1, 2, 2, 3, 0
 	};
 	Model2D model1{};
-	model1.Initialize(device, phyDevice, graphQ, m_CommandPool, vertices, indices);
+	model1.Initialize(m_VulkanInstance, m_CommandPool, vertices, indices);
 
 	// Triangle
 	vertices =
@@ -412,7 +385,7 @@ void Application::Create2DScene()
 		0, 1, 2
 	};
 	Model2D model2{};
-	model2.Initialize(device, phyDevice, graphQ, m_CommandPool, vertices, indices);
+	model2.Initialize(m_VulkanInstance, m_CommandPool, vertices, indices);
 
 	// Pentagon
 	vertices =
@@ -430,7 +403,7 @@ void Application::Create2DScene()
 		0, 3, 4
 	};
 	Model2D model3{};
-	model3.Initialize(device, phyDevice, graphQ, m_CommandPool, vertices, indices);
+	model3.Initialize(m_VulkanInstance, m_CommandPool, vertices, indices);
 	
 	model1.SetPosition(glm::vec2{ -0.65f, -0.33f });
 	model1.SetRotation(0);
@@ -453,34 +426,30 @@ void Application::Create2DScene()
 
 void Application::Create3DScene()
 {
-	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
-	const VkPhysicalDevice& phyDevice{ m_VulkanInstance.GetVkPhysicalDevice() };
-	const VkQueue& graphQ{ m_VulkanInstance.GetGraphicsQueue() };
-
 	std::vector<Model3D> sceneModels{};
 
 	Model3D model1{};
-	model1.Initialize(device, phyDevice, graphQ, m_CommandPool, g_Model3DPath1);
+	model1.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
 
 	// plane
 	Model3D model2{};
-	model2.Initialize(device, phyDevice, graphQ, m_CommandPool, g_PlaneModel);
+	model2.Initialize(m_VulkanInstance, m_CommandPool, g_PlaneModel);
 
 	// cube
 	Model3D model3{};
-	model3.Initialize(device, phyDevice, graphQ, m_CommandPool, g_Model3DPath2);
+	model3.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
 
 	// cube
 	Model3D model4{};
-	model4.Initialize(device, phyDevice, graphQ, m_CommandPool, g_Model3DPath2);
+	model4.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
 
 	// cube
 	Model3D model5{};
-	model5.Initialize(device, phyDevice, graphQ, m_CommandPool, g_Model3DPath2);
+	model5.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
 
 	// cube
 	Model3D model6{};
-	model6.Initialize(device, phyDevice, graphQ, m_CommandPool, g_Model3DPath2);
+	model6.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
 
 	// Translations
 	model1.SetPosition(glm::vec3{ -5.f, 0.5f, 0.f });
