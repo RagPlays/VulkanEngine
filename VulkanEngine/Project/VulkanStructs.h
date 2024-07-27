@@ -15,6 +15,14 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
+struct InputState
+{
+	bool keyChange = false;
+	bool mouseChange = false;
+	double lastMouseX = 0.0;
+	double lastMouseY = 0.0;
+};
+
 struct ShaderConfig
 {
 	std::string filePath{};

@@ -42,7 +42,7 @@ void DataBuffer::Initialize(VkDevice device, VkPhysicalDevice phyDevice, VkMemor
 
     if (vkAllocateMemory(device, &allocInfo, VK_NULL_HANDLE, &m_VkBufferMemory) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to allocate vertex buffer memory!");
+        throw std::runtime_error{ "failed to allocate vertex buffer memory!" };
     }
 
     vkBindBufferMemory(device, m_VkBuffer, m_VkBufferMemory, 0);
@@ -77,7 +77,7 @@ const VkDeviceSize& DataBuffer::GetSizeInBytes() const
     return m_Size;
 }
 
-void DataBuffer::Upload(VkDevice device, VkDeviceSize size, const void* data)
+void DataBuffer::Upload(VkDevice device, VkDeviceSize size, const void* data) const
 {
     void* mappedData{};
     Map(device, size, &mappedData);
@@ -85,16 +85,16 @@ void DataBuffer::Upload(VkDevice device, VkDeviceSize size, const void* data)
     vkUnmapMemory(device, m_VkBufferMemory);
 }
 
-void DataBuffer::Map(VkDevice device, VkDeviceSize size, void** data)
+void DataBuffer::Map(VkDevice device, VkDeviceSize size, void** data) const
 {
     vkMapMemory(device, m_VkBufferMemory, 0, size, 0, data);
 }
 
-void DataBuffer::BindAsVertexBuffer(VkCommandBuffer commandBuffer) const
+void DataBuffer::BindAsVertexBuffer(VkCommandBuffer commandBuffer, uint32_t firstBinding) const
 {
     VkBuffer vertexBuffers[]{ m_VkBuffer };
     VkDeviceSize offsets[]{ 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    vkCmdBindVertexBuffers(commandBuffer, firstBinding, 1, vertexBuffers, offsets);
 }
 
 void DataBuffer::BindAsIndexBuffer(VkCommandBuffer commandBuffer) const
@@ -119,7 +119,7 @@ void DataBuffer::CopyBuffer(VkQueue graphicsQueue, VkDevice device, const Comman
     commandBuffer.Destroy(device, commandPool);
 }
 
-uint32_t DataBuffer::FindMemoryType(VkPhysicalDevice physDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t DataBuffer::FindMemoryType(VkPhysicalDevice physDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) const
 {
     VkPhysicalDeviceMemoryProperties memProperties{};
     vkGetPhysicalDeviceMemoryProperties(physDevice, &memProperties);

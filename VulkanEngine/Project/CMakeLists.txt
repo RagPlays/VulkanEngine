@@ -72,10 +72,16 @@ set(SOURCES
     "GraphicsPipeline2D.h"
     "GraphicsPipeline2D.cpp"
     "Vertex.h"
- "DepthBuffer.cpp" "DepthBuffer.h" "Swapchain.cpp" "Swapchain.h")
+    "DepthBuffer.cpp"
+    "DepthBuffer.h"
+    "Swapchain.cpp"
+    "Swapchain.h"
+    "GraphicsPipeline3DIR.h"
+    "GraphicsPipeline3DIR.cpp"
+)
 
 # Create the executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${GLSL_SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${GLSL_SOURCE_FILES} )
 add_dependencies(${PROJECT_NAME} Shaders)
 
 # Link libraries

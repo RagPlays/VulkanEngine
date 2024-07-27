@@ -20,16 +20,16 @@ public:
 	const VkDeviceMemory& GetVkDeviceMemory() const;
 	const VkDeviceSize& GetSizeInBytes() const;
 
-	void Upload(VkDevice device, VkDeviceSize size, const void* data);
-	void Map(VkDevice device, VkDeviceSize size, void** data);
-	void BindAsVertexBuffer(VkCommandBuffer commandBuffer) const;
+	void Upload(VkDevice device, VkDeviceSize size, const void* data) const;
+	void Map(VkDevice device, VkDeviceSize size, void** data) const;
+	void BindAsVertexBuffer(VkCommandBuffer commandBuffer, uint32_t firstBinding = 0) const;
 	void BindAsIndexBuffer(VkCommandBuffer commandBuffer) const;
 
 	static void CopyBuffer(VkQueue graphicsQueue, VkDevice device, const CommandPool& commandPool, DataBuffer srcBuffer, DataBuffer dstBuffer, VkDeviceSize size);
 
 private:
 
-	static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+	uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
 private:
 

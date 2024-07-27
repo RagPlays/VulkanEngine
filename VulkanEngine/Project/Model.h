@@ -86,4 +86,46 @@ private:
 
 };
 
+class Model3DIR final
+{
+public:
+
+	Model3DIR();
+	~Model3DIR() = default;
+
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::string& modelFilePath, uint32_t instanceCount);
+	void Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::vector<Vertex3DIR>& vertices, const std::vector<uint32_t>& indices, uint32_t instanceCount);
+	void Destroy(VkDevice device);
+
+	void SetPosition(uint32_t instanceIndex, const glm::vec3& position);
+	void SetRotation(uint32_t instanceIndex, const glm::quat& rotation);
+	void SetScale(uint32_t instanceIndex, const glm::vec3& scale);
+	void SetScale(uint32_t instanceIndex, float scale);
+	void SetTransform(uint32_t instanceIndex, const Transform3D& transform);
+
+	uint32_t GetInstanceCount() const;
+
+	void Update(VkDevice device);
+	void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const;
+
+private:
+
+	void LoadModelFromFile(const std::string& filePath, std::vector<Vertex3DIR>& vertices, std::vector<uint32_t>& indices);
+	void InitDataBuffers(const VulkanInstance& instance, const CommandPool& commandPool, const std::vector<Vertex3DIR>& vertices, const std::vector<uint32_t>& indices);
+	void UpdateModelMatrix(uint32_t instanceIndex);
+	void UpdateModelBuffer(VkDevice device) const;
+
+private:
+
+	std::vector<Transform3D> m_Transforms;
+	std::vector<ModelUBO> m_ModelMatrices;
+
+	uint32_t m_InstanceCount;
+	uint32_t m_NrIndices;
+
+	DataBuffer m_VertexBuffer;
+	DataBuffer m_IndexBuffer;
+	DataBuffer m_InstanceBuffer;
+
+};
 #endif // !MODEL_H

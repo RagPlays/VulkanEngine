@@ -10,6 +10,8 @@
 
 class Camera;
 
+// Can be get better by making templated class //
+
 class Scene2D final
 {
 public:
@@ -22,9 +24,6 @@ public:
 	void Destroy(VkDevice device);
 
 	void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const;
-
-	size_t GetNrOfModels() const;
-	const std::vector<Model2D>& GetModels() const;
 
 private:
 
@@ -44,12 +43,29 @@ public:
 
 	void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const;
 
-	size_t GetNrOfModels() const;
-	const std::vector<Model3D>& GetModels() const;
-
 private:
 
 	std::vector<Model3D> m_Models;
+
+};
+
+class Scene3DIR final
+{
+public:
+
+	Scene3DIR() = default;
+	~Scene3DIR() = default;
+
+	void Initialize(const std::string& filePath);
+	void Initialize(std::vector<Model3DIR>&& models);
+	void Destroy(VkDevice device);
+
+	void Update(VkDevice device);
+	void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const;
+
+private:
+
+	std::vector<Model3DIR> m_Models;
 
 };
 

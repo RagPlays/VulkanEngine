@@ -62,12 +62,12 @@ void CommandBuffer::EndRecording() const
     }
 }
 
-void CommandBuffer::BeginRenderPass(const VkRenderPassBeginInfo& renderPassInfo, VkSubpassContents contents)
+void CommandBuffer::BeginRenderPass(const VkRenderPassBeginInfo& renderPassInfo, VkSubpassContents contents) const
 {
     vkCmdBeginRenderPass(m_VkCommandBuffer, &renderPassInfo, contents);
 }
 
-void CommandBuffer::EndRenderPass()
+void CommandBuffer::EndRenderPass() const
 {
     vkCmdEndRenderPass(m_VkCommandBuffer);
 }

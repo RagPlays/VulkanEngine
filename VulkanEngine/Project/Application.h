@@ -42,6 +42,7 @@
 #include "Window.h"
 #include "GraphicsPipeline2D.h"
 #include "GraphicsPipeline3D.h"
+#include "GraphicsPipeline3DIR.h"
 #include "DepthBuffer.h"
 #include "Swapchain.h"
 
@@ -60,6 +61,7 @@ private:
 	void MainLoop();
 	void Cleanup();
 
+	void Update();
 	void DrawFrame();
 	void RecordCommandBuffer(uint32_t imageIndex);
 
@@ -72,6 +74,7 @@ private:
 	// Graphics Pipeline
 	void CreateGraphicsPipeline2D();
 	void CreateGraphicsPipeline3D();
+	void CreateGraphicsPipeline3DIR();
 
 	// Command Pool
 	void CreateCommandBuffers();
@@ -79,6 +82,7 @@ private:
 	// Scenes
 	void Create2DScene();
 	void Create3DScene();
+	void Create3DIRScene();
 
 private:
 
@@ -97,6 +101,7 @@ private:
 	// Pipeline
 	GraphicsPipeline2D m_GraphicsPipeline2D;
 	GraphicsPipeline3D m_GraphicsPipeline3D;
+	GraphicsPipeline3DIR m_GraphicsPipeline3DIR;
 
 	// Frame Buffers
 	std::vector<VkFramebuffer> m_FrameBuffers;

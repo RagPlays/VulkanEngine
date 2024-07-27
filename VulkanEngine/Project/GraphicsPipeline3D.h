@@ -31,8 +31,6 @@ public:
 
 	void SetScene(std::vector<Model3D>&& models);
 
-	size_t GetNrOfModels() const;
-
 private:
 
 	void CreateDescriptorSetLayout(VkDevice device);

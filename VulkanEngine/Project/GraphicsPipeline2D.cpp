@@ -78,7 +78,7 @@ void GraphicsPipeline2D::CreateDescriptorSetLayout(VkDevice device)
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_VkDescriptorSetLayout) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to create descriptor set layout!");
+		throw std::runtime_error{ "failed to create descriptor set layout!" };
 	}
 }
 
@@ -97,7 +97,7 @@ void GraphicsPipeline2D::CreateDescriptorPool(VkDevice device)
 
 	if (vkCreateDescriptorPool(device, &poolInfo, VK_NULL_HANDLE, &m_DescriptorPool) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to create descriptor pool!");
+		throw std::runtime_error{ "failed to create descriptor pool!" };
 	}
 }
 
@@ -114,7 +114,7 @@ void GraphicsPipeline2D::AllocateDescriptorSets(VkDevice device)
 
 	if (vkAllocateDescriptorSets(device, &allocInfo, m_DescriptorSets.data()) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to allocate descriptor sets!");
+		throw std::runtime_error{ "failed to allocate descriptor sets!" };
 	}
 }
 

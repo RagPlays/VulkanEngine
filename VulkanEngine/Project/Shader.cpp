@@ -13,18 +13,6 @@ Shader::Shader()
 {
 }
 
-void Shader::Initialize(VkDevice device, const std::string& filePath, const std::string& entryPoint, VkShaderStageFlagBits stage)
-{
-    m_FilePath = filePath;
-    m_EntryPoint = entryPoint;
-    m_ShaderStageFlag = stage;
-
-    std::vector<char> code{ ReadFile(m_FilePath) };
-    if (code.empty()) throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
-
-    CreateShaderModule(device, code);
-}
-
 void Shader::Initialize(VkDevice device, const ShaderConfig& shaderConfig)
 {
     m_FilePath = shaderConfig.filePath;
@@ -32,10 +20,7 @@ void Shader::Initialize(VkDevice device, const ShaderConfig& shaderConfig)
     m_ShaderStageFlag = shaderConfig.stage;
 
     std::vector<char> code{ ReadFile(m_FilePath) };
-    if (code.empty())
-    {
-        throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
-    }
+    if (code.empty()) throw std::runtime_error{ "Shader code is empty, failed to read file: " + m_FilePath };
 
     CreateShaderModule(device, code);
 }
@@ -57,10 +42,7 @@ VkPipelineShaderStageCreateInfo Shader::GetPipelineShaderStageInfo() const
     shaderStageInfo.module = m_VkShaderModule;
     shaderStageInfo.pName = m_EntryPoint.c_str();
 
-    if (!shaderStageInfo.module)
-    {
-        throw std::runtime_error{ "Shader modules not created correctly!" };
-    }
+    if (!shaderStageInfo.module) throw std::runtime_error{ "Shader modules not created correctly!" };
 
     return shaderStageInfo;
 }

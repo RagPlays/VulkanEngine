@@ -29,16 +29,6 @@ void Scene2D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayou
 	}
 }
 
-size_t Scene2D::GetNrOfModels() const
-{
-	return m_Models.size();
-}
-
-const std::vector<Model2D>& Scene2D::GetModels() const
-{
-	return m_Models;
-}
-
 // SCENE 3D //
 
 void Scene3D::Initialize(const std::string& filePath)
@@ -68,12 +58,37 @@ void Scene3D::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayou
 	}
 }
 
-size_t Scene3D::GetNrOfModels() const
+void Scene3DIR::Initialize(const std::string& filePath)
 {
-	return m_Models.size();
+	// load models from file
 }
 
-const std::vector<Model3D>& Scene3D::GetModels() const
+void Scene3DIR::Initialize(std::vector<Model3DIR>&& models)
 {
-	return m_Models;
+	m_Models = std::move(models);
+}
+
+void Scene3DIR::Destroy(VkDevice device)
+{
+	for (auto& model : m_Models)
+	{
+		model.Destroy(device);
+	}
+	m_Models.clear();
+}
+
+void Scene3DIR::Update(VkDevice device)
+{
+	for (auto& model : m_Models)
+	{
+		model.Update(device);
+	}
+}
+
+void Scene3DIR::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const
+{
+	for (const auto& model : m_Models)
+	{
+		model.Draw(commandBuffer, pipelineLayout);
+	}
 }

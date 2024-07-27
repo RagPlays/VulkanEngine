@@ -1,5 +1,5 @@
 #if defined DEBUG || defined _DEBUG
-#include "vld.h"
+//#include "vld.h"
 #endif // DEBUG
 
 #include "Application.h"

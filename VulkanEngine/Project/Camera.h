@@ -14,6 +14,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "VulkanStructs.h"
 #include "DataBuffer.h"
 
 class VulkanInstance;
@@ -29,14 +30,15 @@ public:
     void Initialize(const VulkanInstance& instance, const Window& window);
     void Destroy(VkDevice device);
 
-    void Update(uint32_t currentFrame);
+    void Update(VkDevice device, uint32_t currentFrame);
 
     const std::vector<DataBuffer>& GetUniformBuffers() const;
+    const glm::vec3& GetDirection() const;
 
 private:
 
     void UpdateCameraVectors();
-    void UpdateUniformBufferObjects(uint32_t currentFrame);
+    void UpdateUniformBufferObjects(VkDevice device, uint32_t currentFrame);
 
 private:
 
@@ -49,12 +51,9 @@ private:
     glm::vec3 m_Right;
     glm::vec3 m_WorldUp;
 
-    float m_Yaw;
-    float m_Pitch;
-    //float m_Roll;
+    glm::vec3 m_Rotation; // (Pitch, Yaw, Roll)
 
-    double m_LastMouseX;
-    double m_LastMouseY;
+    InputState m_InputState;
 
     float m_MovementSpeed;
     float m_Sensitivity;
@@ -63,13 +62,9 @@ private:
     float m_Near;
     float m_Far;
 
-    glm::mat4 m_ViewMatrix{};
-    glm::mat4 m_PerspectiveProjMatrix{};
-    glm::mat4 m_OrthoProjMatrix{};
+    CameraUBO m_CameraMatrix;
 
-    uint32_t m_CurrentFrame;
     std::vector<DataBuffer> m_UniformBuffers;
-    std::vector<void*> m_UniformBuffersMapped;
 
 };
 

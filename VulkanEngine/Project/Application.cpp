@@ -1,6 +1,8 @@
 #include "Application.h"
 #include "Timer.h"
 
+#define USE_DEBUG_BACKGROUND_COLOR
+
 void Application::Run()
 {
 	InitVulkan();
@@ -35,9 +37,11 @@ void Application::InitVulkan()
 
 	CreateGraphicsPipeline2D();
 	CreateGraphicsPipeline3D();
+	CreateGraphicsPipeline3DIR();
 
 	Create2DScene();
 	Create3DScene();
+	Create3DIRScene();
 
 	m_SyncObjects.Initialize(device);
 }
@@ -48,6 +52,7 @@ void Application::MainLoop()
 	{
 		Timer::Get().Update();
 		m_Window.PollEvents();
+		Update();
 		DrawFrame();
 	}
 	m_VulkanInstance.DeviceWaitIdle();
@@ -63,6 +68,7 @@ void Application::Cleanup()
 
 	m_Camera.Destroy(device);
 
+	m_GraphicsPipeline3DIR.Destory(device);
 	m_GraphicsPipeline3D.Destroy(device);
 	m_GraphicsPipeline2D.Destroy(device);
 
@@ -75,6 +81,17 @@ void Application::Cleanup()
 	m_VulkanInstance.Destroy();
 
 	m_Window.Destroy();
+}
+
+void Application::Update()
+{
+	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
+
+	// Update the camera (view and projection matrices) uniform buffer
+	m_Camera.Update(device, m_CurrentFrame);
+
+	// Update models
+	m_GraphicsPipeline3DIR.Update(m_VulkanInstance.GetVkDevice());
 }
 
 void Application::DrawFrame()
@@ -112,9 +129,6 @@ void Application::DrawFrame()
 
 	// Reset the fence for this frame
 	vkResetFences(device, 1, &inFlightFence);
-
-	// Update the camera (view and projection matrices) uniform buffer
-	m_Camera.Update(m_CurrentFrame);
 
 	// Record commands in the command buffer for this frame
 	RecordCommandBuffer(imageIndex);
@@ -165,11 +179,29 @@ void Application::DrawFrame()
 void Application::RecordCommandBuffer(uint32_t imageIndex)
 {
 	const VkExtent2D& swapchainExtent{ m_Swapchain.GetVkExtent() };
-	CommandBuffer& comndBffr{ m_CommandBuffers[m_CurrentFrame] };
+	const CommandBuffer& comndBffr{ m_CommandBuffers[m_CurrentFrame] };
 	const VkCommandBuffer& VkCmndBffr{ comndBffr.GetVkCommandBuffer() };
 
+	const glm::vec3& cameraDir{ glm::normalize(m_Camera.GetDirection()) };
+
+#ifdef USE_DEBUG_BACKGROUND_COLOR
+
+	VkClearColorValue clearColor
+	{
+		{ cameraDir.x, cameraDir.y, cameraDir.z, 1.f }
+	};
+
+#else
+
+	VkClearColorValue clearColor
+	{
+		{ 0.025f, 0.025f, 0.025f, 1.f }
+	};
+
+#endif
+
 	std::array<VkClearValue, 2> clearValues{};
-	clearValues[0].color = { {0.025f, 0.025f, 0.025f, 1.0f} };
+	clearValues[0].color = clearColor;
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	VkRenderPassBeginInfo renderPassInfo{};
@@ -203,6 +235,7 @@ void Application::RecordCommandBuffer(uint32_t imageIndex)
 
 		vkCmdSetScissor(VkCmndBffr, 0, 1, &scissor);
 
+		m_GraphicsPipeline3DIR.Draw(VkCmndBffr, m_CurrentFrame);
 		m_GraphicsPipeline3D.Draw(VkCmndBffr, m_CurrentFrame);
 		m_GraphicsPipeline2D.Draw(VkCmndBffr, m_CurrentFrame);
 	}
@@ -275,7 +308,7 @@ void Application::CreateFramebuffers()
 
 		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &m_FrameBuffers[idx]) != VK_SUCCESS)
 		{
-			throw std::runtime_error("failed to create framebuffer!");
+			throw std::runtime_error{ "failed to create framebuffer!" };
 		}
 	}
 }
@@ -340,6 +373,37 @@ void Application::CreateGraphicsPipeline3D()
 	configs.renderPass = renderPass;
 
 	m_GraphicsPipeline3D.Initialize(configs, m_Texture, m_Camera);
+}
+
+void Application::CreateGraphicsPipeline3DIR()
+{
+	const VkDevice& device{ m_VulkanInstance.GetVkDevice() };
+	const VkRenderPass& renderPass{ m_RenderPass.GetVkRenderPass() };
+	const VkExtent2D& swapchainExtent{ m_Swapchain.GetVkExtent() };
+
+	const ShaderConfig vertShaderConfig3D
+	{
+		"Shaders/shader3DIR.vert.spv",
+		"main",
+		VK_SHADER_STAGE_VERTEX_BIT
+	};
+
+	const ShaderConfig fragShaderConfig3D
+	{
+		"Shaders/shader3DIR.frag.spv",
+		"main",
+		VK_SHADER_STAGE_FRAGMENT_BIT
+	};
+
+	const ShadersConfigs shaderConfigs3D{ vertShaderConfig3D, fragShaderConfig3D };
+
+	GraphicsPipelineConfigs configs{};
+	configs.device = device;
+	configs.shaderConfigs = shaderConfigs3D;
+	configs.swapchainExtent = swapchainExtent;
+	configs.renderPass = renderPass;
+
+	m_GraphicsPipeline3DIR.Initialize(configs, m_Camera);
 }
 
 void Application::CreateCommandBuffers()
@@ -428,45 +492,36 @@ void Application::Create3DScene()
 {
 	std::vector<Model3D> sceneModels{};
 
+	// cube
 	Model3D model1{};
-	model1.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
+	model1.Initialize(m_VulkanInstance, m_CommandPool, g_CubeModel);
 
 	// plane
 	Model3D model2{};
 	model2.Initialize(m_VulkanInstance, m_CommandPool, g_PlaneModel);
 
-	// cube
 	Model3D model3{};
-	model3.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
-
-	// cube
+	model3.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
 	Model3D model4{};
-	model4.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
-
-	// cube
+	model4.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
 	Model3D model5{};
-	model5.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
-
-	// cube
+	model5.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
 	Model3D model6{};
-	model6.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath2);
+	model6.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
 
 	// Translations
 	model1.SetPosition(glm::vec3{ -5.f, 0.5f, 0.f });
+	model1.SetScale(0.5f);
 
 	model2.SetScale(50.f);
 
 	model3.SetPosition(glm::vec3{ 2.f, 2.f, 2.f });
-	model3.SetScale(0.5f);
 
 	model4.SetPosition(glm::vec3{ -2.f, 2.f, 2.f });
-	model4.SetScale(0.5f);
 
 	model5.SetPosition(glm::vec3{ 2.f, 2.f, -2.f });
-	model5.SetScale(0.5f);
 
 	model6.SetPosition(glm::vec3{ -2.f, 2.f, -2.f });
-	model6.SetScale(0.5f);
 
 	// adding models
 	sceneModels.emplace_back(std::move(model1));
@@ -477,4 +532,22 @@ void Application::Create3DScene()
 	sceneModels.emplace_back(std::move(model6));
 
 	m_GraphicsPipeline3D.SetScene(std::move(sceneModels));
+}
+
+void Application::Create3DIRScene()
+{
+	std::vector<Model3DIR> sceneModels{};
+
+	// cube
+	Model3DIR cube{};
+	cube.Initialize(m_VulkanInstance, m_CommandPool, g_CubeModel, 2);
+	cube.SetPosition(0, glm::vec3{ -2.f, 0.5f, 0.f });
+	cube.SetScale(0, 0.5f);
+
+	cube.SetPosition(1, glm::vec3{ 2.f, 0.5f, 0.f });
+	cube.SetScale(1, 0.5f);
+
+	sceneModels.emplace_back(std::move(cube));
+
+	m_GraphicsPipeline3DIR.SetScene(std::move(sceneModels));
 }

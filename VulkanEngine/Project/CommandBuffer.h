@@ -21,8 +21,8 @@ public:
 	void BeginRecording(VkCommandBufferUsageFlags usage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) const;
 	void EndRecording() const;
 
-	void BeginRenderPass(const VkRenderPassBeginInfo& renderPassInfo, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
-	void EndRenderPass();
+	void BeginRenderPass(const VkRenderPassBeginInfo& renderPassInfo, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE) const;
+	void EndRenderPass() const;
 
 	void Submit(VkQueue queue, VkFence fence) const;
 	void Submit(VkSubmitInfo& submitInfo, VkQueue queue, VkFence fence) const;
