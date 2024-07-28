@@ -65,6 +65,11 @@ void GraphicsPipeline3DIR::Draw(VkCommandBuffer commandBuffer, uint32_t currentF
 	m_Scene.Draw(commandBuffer, m_VkPipelineLayout);
 }
 
+void GraphicsPipeline3DIR::SetScene(Scene3DIR&& scene)
+{
+	m_Scene = std::move(scene);
+}
+
 void GraphicsPipeline3DIR::SetScene(std::vector<Model3DIR>&& models)
 {
 	m_Scene.Initialize(std::move(models));

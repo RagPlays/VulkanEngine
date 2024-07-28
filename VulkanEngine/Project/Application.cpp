@@ -491,62 +491,28 @@ void Application::Create3DScene()
 {
 	std::vector<Model3D> sceneModels{};
 
-	// cube
-	Model3D model1{};
-	model1.Initialize(m_VulkanInstance, m_CommandPool, g_CubeModel);
-
 	// plane
+	Model3D model1{};
+	model1.Initialize(m_VulkanInstance, m_CommandPool, g_PlaneModel);
+
 	Model3D model2{};
-	model2.Initialize(m_VulkanInstance, m_CommandPool, g_PlaneModel);
+	model2.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
 
-	Model3D model3{};
-	model3.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
-	Model3D model4{};
-	model4.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
-	Model3D model5{};
-	model5.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
-	Model3D model6{};
-	model6.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
-
-	// Translations
-	model1.SetPosition(glm::vec3{ -5.f, 0.5f, 0.f });
-	model1.SetScale(0.5f);
-
-	model2.SetScale(50.f);
-
-	model3.SetPosition(glm::vec3{ 2.f, 2.f, 2.f });
-
-	model4.SetPosition(glm::vec3{ -2.f, 2.f, 2.f });
-
-	model5.SetPosition(glm::vec3{ 2.f, 2.f, -2.f });
-
-	model6.SetPosition(glm::vec3{ -2.f, 2.f, -2.f });
+	model1.SetPosition(glm::vec3{0.f, -2.f, 0.f});
+	model1.SetScale(100.f);
+	model2.SetPosition(glm::vec3{ 0.f, 0.f, 0.f });
 
 	// adding models
 	sceneModels.emplace_back(std::move(model1));
 	sceneModels.emplace_back(std::move(model2));
-	sceneModels.emplace_back(std::move(model3));
-	sceneModels.emplace_back(std::move(model4));
-	sceneModels.emplace_back(std::move(model5));
-	sceneModels.emplace_back(std::move(model6));
 
 	m_GraphicsPipeline3D.SetScene(std::move(sceneModels));
 }
 
 void Application::Create3DIRScene()
 {
-	std::vector<Model3DIR> sceneModels{};
+	Scene3DIR scene3DIR{};
+	scene3DIR.Initialize(m_VulkanInstance, m_CommandPool, "Resources/Scenes/Scene3DIR.json");
 
-	// cube
-	Model3DIR cube{};
-	cube.Initialize(m_VulkanInstance, m_CommandPool, g_CubeModel, 2);
-	cube.SetPosition(0, glm::vec3{ -2.f, 0.5f, 0.f });
-	cube.SetScale(0, 0.5f);
-
-	cube.SetPosition(1, glm::vec3{ 2.f, 0.5f, 0.f });
-	cube.SetScale(1, 0.5f);
-
-	sceneModels.emplace_back(std::move(cube));
-
-	m_GraphicsPipeline3DIR.SetScene(std::move(sceneModels));
+	m_GraphicsPipeline3DIR.SetScene(std::move(scene3DIR));
 }

@@ -27,6 +27,7 @@ public:
 	void Update(VkDevice device);
 	void Draw(VkCommandBuffer commandBuffer, uint32_t currentFrame) const;
 
+	void SetScene(Scene3DIR&& scene);
 	void SetScene(std::vector<Model3DIR>&& models);
 
 private:

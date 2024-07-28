@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <random>
 
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
@@ -102,6 +103,37 @@ struct Transform3D
 		model = model * glm::mat4_cast(rotation);
 		model = glm::scale(model, scale);
 		return model;
+	}
+
+	static glm::quat GetRandomRotationQuat()
+	{
+		static std::random_device rd{};
+		static std::mt19937 gen{ rd() };
+		static std::uniform_real_distribution<float> dis{ 0.0f, 360.0f };
+
+		const float yaw{ dis(gen) };
+		const float pitch = dis(gen);
+		const float roll = dis(gen);
+
+		return glm::quat(glm::vec3(glm::radians(pitch), glm::radians(yaw), glm::radians(roll)));
+	}
+
+	static glm::vec3 GetRandomRotationVec()
+	{
+		static std::random_device rd{};
+		static std::mt19937 gen{ rd() };
+		static std::uniform_real_distribution<float> dis{ 0.0f, 360.0f };
+
+		return glm::vec3{ dis(gen), dis(gen), dis(gen) };
+	}
+
+	static glm::vec3 GetRandomScale(float min, float max)
+	{
+		static std::random_device rd{};
+		static std::mt19937 gen{ rd() };
+		std::uniform_real_distribution<float> dis{ min, max };
+
+		return glm::vec3{ dis(gen) };
 	}
 };
 

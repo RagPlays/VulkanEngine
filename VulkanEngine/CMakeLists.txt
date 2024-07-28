@@ -34,6 +34,16 @@ if(NOT glfw_POPULATED)
   add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+# Declare the nlohmann/json library as a fetchable content
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.3 # Specify the version of the library you want to use
+)
+
+# Make the fetched content available
+FetchContent_MakeAvailable(json)
+
 # If using validation layers, copy the required JSON files (optional)
 #add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 #    COMMAND ${CMAKE_COMMAND} -E copy_if_different
