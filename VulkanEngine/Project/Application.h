@@ -117,7 +117,8 @@ private:
 	uint32_t m_CurrentFrame;
 
 	// Textures
-	Texture m_Texture;
+	Texture m_3DTexture;
+	Texture m_3DIRTexture;
 
 	// Depth Buffer
 	DepthBuffer m_DepthBuffer;

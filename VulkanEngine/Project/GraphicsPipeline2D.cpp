@@ -175,8 +175,8 @@ void GraphicsPipeline2D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 		fragShader.GetPipelineShaderStageInfo()
 	};
 
-	auto bindingDescription{ std::array<VkVertexInputBindingDescription, 1>{ Vertex2D::GetBindingDescription() } };
-	auto attributeDescriptions{ std::array<VkVertexInputAttributeDescription, 2>{ Vertex2D::GetAttributeDescriptions() } };
+	const auto bindingDescription{ Descriptions::Get2DBindingDescriptions() };
+	const auto attributeDescriptions{ Descriptions::Get2DAttributeDescriptions() };
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -185,7 +185,7 @@ void GraphicsPipeline2D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-	auto inputAssembly{ Shader::GetInputAssemblyStateInfo() };
+	const auto inputAssembly{ Shader::GetInputAssemblyStateInfo() };
 
 	std::array<VkDynamicState, 2> dynamicStates
 	{

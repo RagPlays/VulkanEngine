@@ -31,7 +31,8 @@ void Application::InitVulkan()
 
 	CreateFramebuffers();
 
-	m_Texture.Initialize(m_VulkanInstance, m_CommandPool, g_TexturePath1);
+	m_3DTexture.Initialize(m_VulkanInstance, m_CommandPool, g_TexturePath1);
+	m_3DIRTexture.Initialize(m_VulkanInstance, m_CommandPool, g_TexturePath3);
 
 	m_Camera.Initialize(m_VulkanInstance, m_Window);
 
@@ -64,7 +65,8 @@ void Application::Cleanup()
 
 	CleanupWindowResources();
 
-	m_Texture.Destroy(device);
+	m_3DIRTexture.Destroy(device);
+	m_3DTexture.Destroy(device);
 
 	m_Camera.Destroy(device);
 
@@ -122,10 +124,7 @@ void Application::DrawFrame()
 		RecreateWindowResources();
 		return;
 	}
-	else if (acquireResult != VK_SUCCESS)
-	{
-		throw std::runtime_error("Failed to acquire swap chain image!");
-	}
+	else if (acquireResult != VK_SUCCESS) throw std::runtime_error{ "Failed to acquire swap chain image!" };
 
 	// Reset the fence for this frame
 	vkResetFences(device, 1, &inFlightFence);
@@ -372,7 +371,7 @@ void Application::CreateGraphicsPipeline3D()
 	configs.swapchainExtent = swapchainExtent;
 	configs.renderPass = renderPass;
 
-	m_GraphicsPipeline3D.Initialize(configs, m_Texture, m_Camera);
+	m_GraphicsPipeline3D.Initialize(configs, m_3DTexture, m_Camera);
 }
 
 void Application::CreateGraphicsPipeline3DIR()
@@ -403,7 +402,7 @@ void Application::CreateGraphicsPipeline3DIR()
 	configs.swapchainExtent = swapchainExtent;
 	configs.renderPass = renderPass;
 
-	m_GraphicsPipeline3DIR.Initialize(configs, m_Camera);
+	m_GraphicsPipeline3DIR.Initialize(configs, m_3DIRTexture, m_Camera);
 }
 
 void Application::CreateCommandBuffers()

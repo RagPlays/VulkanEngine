@@ -240,44 +240,71 @@ void Model3D::LoadModelFromFile(const std::string& filePath, std::vector<Vertex3
     std::vector<tinyobj::material_t> materials{};
     std::string warn{};
     std::string err{};
-
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str()))
     {
-        throw std::runtime_error(warn + err);
+        throw std::runtime_error{ warn + err };
     }
 
     std::unordered_map<Vertex3D, uint32_t> uniqueVertices{};
+
     for (const auto& shape : shapes)
     {
         for (const auto& index : shape.mesh.indices)
         {
-            // Setting vertex
             Vertex3D vertex{};
 
+            // Position
             vertex.pos =
             {
-                static_cast<float>(attrib.vertices[3 * index.vertex_index + 0]),
-                static_cast<float>(attrib.vertices[3 * index.vertex_index + 1]),
-                static_cast<float>(attrib.vertices[3 * index.vertex_index + 2])
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
             };
 
-            vertex.texCoord =
+            // Texture coordinates
+            if (index.texcoord_index >= 0)
             {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-            };
+                vertex.texCoord =
+                {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+            }
 
-            vertex.color = { 1.0f, 1.0f, 1.0f };
+            //// Normals
+            //if (index.normal_index >= 0)
+            //{
+            //    vertex.normal =
+            //    {
+            //        attrib.normals[3 * index.normal_index + 0],
+            //        attrib.normals[3 * index.normal_index + 1],
+            //        attrib.normals[3 * index.normal_index + 2]
+            //    };
+            //}
 
-            // Pushing vertex
+            // Colors
+            if (!attrib.colors.empty())
+            {
+                vertex.color =
+                {
+                    attrib.colors[3 * index.vertex_index + 0],
+                    attrib.colors[3 * index.vertex_index + 1],
+                    attrib.colors[3 * index.vertex_index + 2]
+                };
+            }
+            else vertex.color = { 1.0f, 1.0f, 1.0f }; // Default white if no color data
+
+            // Add vertex to the list
             if (uniqueVertices.count(vertex) == 0)
             {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
                 vertices.emplace_back(vertex);
             }
+
             indices.emplace_back(uniqueVertices[vertex]);
         }
     }
+
     m_NrIndices = static_cast<uint32_t>(indices.size());
 }
 
@@ -339,10 +366,12 @@ Model3DIR::Model3DIR()
 void Model3DIR::Initialize(const VulkanInstance& instance, const CommandPool& commandPool, const std::string& modelFilePath, uint32_t instanceCount)
 {
     if (instanceCount < 1) throw std::exception{ "Model: invalid instanceCount value!" };
+
     m_InstanceCount = instanceCount;
     m_Transforms.resize(instanceCount);
     m_ModelMatrices.resize(instanceCount);
 
+    m_NrIndices = 0;
     std::vector<Vertex3DIR> vertices{};
     std::vector<uint32_t> indices{};
 
@@ -354,10 +383,12 @@ void Model3DIR::Initialize(const VulkanInstance& instance, const CommandPool& co
 void Model3DIR::Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::vector<Vertex3DIR>& vertices, const std::vector<uint32_t>& indices, uint32_t instanceCount)
 {
     if (instanceCount < 1) throw std::exception{ "Model: invalid instanceCount value!" };
+
     m_InstanceCount = instanceCount;
     m_Transforms.resize(instanceCount);
     m_ModelMatrices.resize(instanceCount);
 
+    m_NrIndices = static_cast<uint32_t>(indices.size());
     InitDataBuffers(instance, cmndP, vertices, indices);
     for (uint32_t instanceIdx{}; instanceIdx < instanceCount; ++instanceIdx)
     {
@@ -377,6 +408,14 @@ void Model3DIR::Destroy(VkDevice device)
     m_ModelMatrices.clear();
 }
 
+void Model3DIR::SetPosition(const glm::vec3& position)
+{
+    for (size_t idx{}; idx < m_ModelMatrices.size(); ++idx)
+    {
+        SetPosition(static_cast<uint32_t>(idx), position);
+    }
+}
+
 void Model3DIR::SetPosition(uint32_t instanceIndex, const glm::vec3& position)
 {
     if (instanceIndex < m_Transforms.size())
@@ -386,12 +425,36 @@ void Model3DIR::SetPosition(uint32_t instanceIndex, const glm::vec3& position)
     }
 }
 
-void Model3DIR::SetRotation(uint32_t instanceIndex, const glm::quat& rotation)
+void Model3DIR::SetRotation(const glm::vec3& rotation)
+{
+    for (size_t idx{}; idx < m_ModelMatrices.size(); ++idx)
+    {
+        SetRotation(static_cast<uint32_t>(idx), rotation);
+    }
+}
+
+void Model3DIR::SetRotation(uint32_t instanceIndex, const glm::vec3& rotation)
 {
     if (instanceIndex < m_Transforms.size())
     {
-        m_Transforms[instanceIndex].rotation = rotation;
+        m_Transforms[instanceIndex].rotation = glm::quat{ rotation };
         UpdateModelMatrix(instanceIndex);
+    }
+}
+
+void Model3DIR::SetScale(const glm::vec3& scale)
+{
+    for (size_t idx{}; idx < m_ModelMatrices.size(); ++idx)
+    {
+        SetScale(static_cast<uint32_t>(idx), scale);
+    }
+}
+
+void Model3DIR::SetScale(float scale)
+{
+    for (size_t idx{}; idx < m_ModelMatrices.size(); ++idx)
+    {
+        SetScale(static_cast<uint32_t>(idx), scale);
     }
 }
 
@@ -445,19 +508,20 @@ void Model3DIR::LoadModelFromFile(const std::string& filePath, std::vector<Verte
     std::vector<tinyobj::material_t> materials{};
     std::string warn{};
     std::string err{};
-
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str()))
     {
         throw std::runtime_error{ warn + err };
     }
 
     std::unordered_map<Vertex3DIR, uint32_t> uniqueVertices{};
+
     for (const auto& shape : shapes)
     {
         for (const auto& index : shape.mesh.indices)
         {
             Vertex3DIR vertex{};
 
+            // Position
             vertex.pos =
             {
                 attrib.vertices[3 * index.vertex_index + 0],
@@ -465,16 +529,50 @@ void Model3DIR::LoadModelFromFile(const std::string& filePath, std::vector<Verte
                 attrib.vertices[3 * index.vertex_index + 2]
             };
 
-            vertex.color = { 1.0f, 1.0f, 1.0f };
+            // Texture coordinates
+            if (index.texcoord_index >= 0)
+            {
+                vertex.texCoord =
+                {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+            }
 
+            //// Normals
+            //if (index.normal_index >= 0)
+            //{
+            //    vertex.normal =
+            //    {
+            //        attrib.normals[3 * index.normal_index + 0],
+            //        attrib.normals[3 * index.normal_index + 1],
+            //        attrib.normals[3 * index.normal_index + 2]
+            //    };
+            //}
+
+            // Colors
+            if (!attrib.colors.empty())
+            {
+                vertex.color =
+                {
+                    attrib.colors[3 * index.vertex_index + 0],
+                    attrib.colors[3 * index.vertex_index + 1],
+                    attrib.colors[3 * index.vertex_index + 2]
+                };
+            }
+            else vertex.color = { 1.0f, 1.0f, 1.0f }; // Default white if no color data
+
+            // Add vertex to the list
             if (uniqueVertices.count(vertex) == 0)
             {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
                 vertices.emplace_back(vertex);
             }
+
             indices.emplace_back(uniqueVertices[vertex]);
         }
     }
+
     m_NrIndices = static_cast<uint32_t>(indices.size());
 }
 

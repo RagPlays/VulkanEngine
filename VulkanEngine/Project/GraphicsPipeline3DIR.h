@@ -21,7 +21,7 @@ public:
 	GraphicsPipeline3DIR() = default;
 	~GraphicsPipeline3DIR() = default;
 
-	void Initialize(const GraphicsPipelineConfigs& configs, const Camera& pCam);
+	void Initialize(const GraphicsPipelineConfigs& configs, const Texture& tex, const Camera& cam);
 	void Destory(VkDevice device);
 
 	void Update(VkDevice device);
@@ -34,7 +34,7 @@ private:
 	void CreateDescriptorSetLayout(VkDevice device);
 	void CreateDescriptorPool(VkDevice device);
 	void AllocateDescriptorSets(VkDevice device);
-	void UpdateDescriptorSets(VkDevice device, const Camera& pCam);
+	void UpdateDescriptorSets(VkDevice device, const Texture& tex, const Camera& cam);
 
 	void CreatePipelineLayout(VkDevice device);
 	void CreatePipeline(VkDevice device, const ShadersConfigs& shaderConfigs, const VkExtent2D& swapchainExtent, VkRenderPass renderPass);

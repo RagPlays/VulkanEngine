@@ -7,12 +7,12 @@
 #include "Texture.h"
 #include "Shader.h"
 
-void GraphicsPipeline3DIR::Initialize(const GraphicsPipelineConfigs& configs, const Camera& pCam)
+void GraphicsPipeline3DIR::Initialize(const GraphicsPipelineConfigs& configs, const Texture& tex, const Camera& cam)
 {
 	CreateDescriptorSetLayout(configs.device);
 	CreateDescriptorPool(configs.device);
 	AllocateDescriptorSets(configs.device);
-	UpdateDescriptorSets(configs.device, pCam);
+	UpdateDescriptorSets(configs.device, tex, cam);
 
 	CreatePipelineLayout(configs.device);
 	CreatePipeline(configs.device, configs.shaderConfigs, configs.swapchainExtent, configs.renderPass);
@@ -79,7 +79,14 @@ void GraphicsPipeline3DIR::CreateDescriptorSetLayout(VkDevice device)
 	uboLayoutBinding.pImmutableSamplers = VK_NULL_HANDLE; // Optional
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-	std::array<VkDescriptorSetLayoutBinding, 1> bindings{ uboLayoutBinding };
+	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+	samplerLayoutBinding.binding = 1;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = VK_NULL_HANDLE;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 2> bindings{ uboLayoutBinding, samplerLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -93,9 +100,12 @@ void GraphicsPipeline3DIR::CreateDescriptorSetLayout(VkDevice device)
 
 void GraphicsPipeline3DIR::CreateDescriptorPool(VkDevice device)
 {
-	std::array<VkDescriptorPoolSize, 1> poolSizes{};
+	std::array<VkDescriptorPoolSize, 2> poolSizes{};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
+
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
 
 	VkDescriptorPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -113,6 +123,7 @@ void GraphicsPipeline3DIR::CreateDescriptorPool(VkDevice device)
 void GraphicsPipeline3DIR::AllocateDescriptorSets(VkDevice device)
 {
 	std::vector<VkDescriptorSetLayout> layouts{ g_MaxFramesInFlight, m_VkDescriptorSetLayout };
+
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = m_DescriptorPool;
@@ -127,27 +138,39 @@ void GraphicsPipeline3DIR::AllocateDescriptorSets(VkDevice device)
 	}
 }
 
-void GraphicsPipeline3DIR::UpdateDescriptorSets(VkDevice device, const Camera& pCam)
+void GraphicsPipeline3DIR::UpdateDescriptorSets(VkDevice device, const Texture& tex, const Camera& cam)
 {
-	const std::vector<DataBuffer>& cameraBuffers{ pCam.GetUniformBuffers() };
+	const auto& cameraBuffers{ cam.GetUniformBuffers() };
+
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageInfo.imageView = tex.GetVkImageView();
+	imageInfo.sampler = tex.GetVkSampler();
 
 	for (size_t frameIdx{}; frameIdx < g_MaxFramesInFlight; ++frameIdx)
 	{
-		std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+		VkDescriptorBufferInfo cameraBufferInfo{};
+		cameraBufferInfo.buffer = cameraBuffers[frameIdx].GetVkBuffer();
+		cameraBufferInfo.offset = 0;
+		cameraBufferInfo.range = sizeof(CameraUBO);
 
-		// Update the uniform buffer
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = cameraBuffers[frameIdx].GetVkBuffer();
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(CameraUBO);
+		std::array<VkWriteDescriptorSet, 2>descriptorWrites{};
+
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = m_DescriptorSets[frameIdx];
+		descriptorWrites[1].dstBinding = 0;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pBufferInfo = &cameraBufferInfo;
 
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].dstSet = m_DescriptorSets[frameIdx];
-		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstBinding = 1;
 		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
+		descriptorWrites[0].pImageInfo = &imageInfo;
 
 		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, VK_NULL_HANDLE);
 	}
@@ -179,8 +202,8 @@ void GraphicsPipeline3DIR::CreatePipeline(VkDevice device, const ShadersConfigs&
 		fragShader.GetPipelineShaderStageInfo()
 	};
 
-	auto bindingDescription = Vertex3DIR::GetBindingDescriptions();
-	auto attributeDescriptions = Vertex3DIR::GetAttributeDescriptions();
+	const auto bindingDescription{ Descriptions::Get3DIRBindingDescriptions() };
+	const auto attributeDescriptions{ Descriptions::Get3DIRAttributeDescriptions() };
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -189,10 +212,7 @@ void GraphicsPipeline3DIR::CreatePipeline(VkDevice device, const ShadersConfigs&
 	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	inputAssembly.primitiveRestartEnable = VK_FALSE;
+	const auto inputAssembly{ Shader::GetInputAssemblyStateInfo() };
 
 	VkViewport viewport{};
 	viewport.x = 0.0f;

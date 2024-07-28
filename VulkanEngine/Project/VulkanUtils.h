@@ -16,6 +16,7 @@ constexpr const char* g_PlaneModel{ "Resources/Models/plane.obj" };
 constexpr const char* g_TriangleModel{ "Resources/Models/triangle.obj" };
 
 constexpr const char* g_TexturePath1{ "Resources/Textures/viking_room.png" };
-constexpr const char* g_TexturePath2{ "Resources/texture.jpg" };
+constexpr const char* g_TexturePath2{ "Resources/Textures/texture.jpg" };
+constexpr const char* g_TexturePath3{ "Resources/Textures/stone_cube_texture.jpeg" };
 
 #endif //!VULKANUTILS_H

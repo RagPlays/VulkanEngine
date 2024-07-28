@@ -89,17 +89,17 @@ void GraphicsPipeline3D::CreateDescriptorSetLayout(VkDevice device)
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_VkDescriptorSetLayout) != VK_SUCCESS)
 	{
-		throw std::runtime_error("failed to create descriptor set layout!");
+		throw std::runtime_error{ "failed to create descriptor set layout!" };
 	}
 }
 
 void GraphicsPipeline3D::CreateDescriptorPool(VkDevice device)
 {
 	std::array<VkDescriptorPoolSize, 2> poolSizes{};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
 
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Camera uniform buffer
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Sampler
 	poolSizes[1].descriptorCount = static_cast<uint32_t>(g_MaxFramesInFlight);
 
 	VkDescriptorPoolCreateInfo poolInfo{};
@@ -135,7 +135,7 @@ void GraphicsPipeline3D::AllocateDescriptorSets(VkDevice device)
 
 void GraphicsPipeline3D::UpdateDescriptorSets(VkDevice device, const Texture& pTex, const Camera& pCam)
 {
-	const std::vector<DataBuffer>& cameraBuffers{ pCam.GetUniformBuffers() };
+	const auto& cameraBuffers{ pCam.GetUniformBuffers() };
 
 	VkDescriptorImageInfo imageInfo{};
 	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -204,8 +204,8 @@ void GraphicsPipeline3D::CreatePipeline(VkDevice device, const ShadersConfigs& s
 		fragShader.GetPipelineShaderStageInfo()
 	};
 
-	auto bindingDescription{ std::array<VkVertexInputBindingDescription, 1>{ Vertex3D::GetBindingDescription() } };
-	auto attributeDescriptions{ std::array<VkVertexInputAttributeDescription, 3>{ Vertex3D::GetAttributeDescriptions() } };
+	const auto bindingDescription{ Descriptions::Get3DBindingDescriptions() };
+	const auto attributeDescriptions{ Descriptions::Get3DAttributeDescriptions() };
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

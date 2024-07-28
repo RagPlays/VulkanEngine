@@ -5,7 +5,7 @@ layout(push_constant) uniform Model3DUBO
     mat4 model;
 } modelUBO;
 
-layout(binding = 0) uniform CameraUBO
+layout(set = 0, binding = 0) uniform CameraUBO
 {
     mat4 view;
     mat4 proj;

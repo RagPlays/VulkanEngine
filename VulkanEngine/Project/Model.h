@@ -97,10 +97,17 @@ public:
 	void Initialize(const VulkanInstance& instance, const CommandPool& cmndP, const std::vector<Vertex3DIR>& vertices, const std::vector<uint32_t>& indices, uint32_t instanceCount);
 	void Destroy(VkDevice device);
 
+	void SetPosition(const glm::vec3& position);
 	void SetPosition(uint32_t instanceIndex, const glm::vec3& position);
-	void SetRotation(uint32_t instanceIndex, const glm::quat& rotation);
+
+	void SetRotation(const glm::vec3& rotation);
+	void SetRotation(uint32_t instanceIndex, const glm::vec3& rotation);
+
+	void SetScale(const glm::vec3& scale);
+	void SetScale(float scale);
 	void SetScale(uint32_t instanceIndex, const glm::vec3& scale);
 	void SetScale(uint32_t instanceIndex, float scale);
+
 	void SetTransform(uint32_t instanceIndex, const Transform3D& transform);
 
 	uint32_t GetInstanceCount() const;
