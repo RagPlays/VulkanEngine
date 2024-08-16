@@ -103,12 +103,12 @@ void Camera::Update(VkDevice device, uint32_t currentFrame)
     }
     if (glfwGetKey(m_Window, GLFW_KEY_Q) == GLFW_PRESS)
     {
-        m_Position -= m_Up * moveSpeed * deltaTime;
+        m_Position -= m_WorldUp * moveSpeed * deltaTime;
         m_InputState.keyChange = true;
     }
     if (glfwGetKey(m_Window, GLFW_KEY_E) == GLFW_PRESS)
     {
-        m_Position += m_Up * moveSpeed * deltaTime;
+        m_Position += m_WorldUp * moveSpeed * deltaTime;
         m_InputState.keyChange = true;
     }
 

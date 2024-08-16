@@ -1,11 +1,11 @@
 #if defined DEBUG || defined _DEBUG
-//#include "vld.h"
+#include "vld.h"
 #endif // DEBUG
 
 #include "Application.h"
 
 /// !!!!!!!!
-// Vulkan Code based on https://vulkan-tutorial.com/
+// Lot of Vulkan Code based on https://vulkan-tutorial.com/ //
 // /////
 
 int main()

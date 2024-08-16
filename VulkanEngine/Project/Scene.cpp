@@ -102,7 +102,7 @@ void Scene3DIR::Initialize(const VulkanInstance& instance, const CommandPool& co
 				model.SetScale(idx, 1.f);
 			}
 
-			m_Models.push_back(std::move(model));
+			m_Models.emplace_back(std::move(model));
 		}
 	}
 	else throw std::runtime_error{ "Failed to open scene file: " + filePath };
