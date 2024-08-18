@@ -164,7 +164,6 @@ void Application::DrawFrame()
 
 	if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || m_Window.GetFramebufferResized())
 	{
-		m_Window.SetFramebufferResized(false);
 		RecreateWindowResources();
 	}
 	else if (presentResult != VK_SUCCESS)
@@ -187,7 +186,7 @@ void Application::RecordCommandBuffer(uint32_t imageIndex)
 
 	VkClearColorValue clearColor
 	{
-		{ cameraDir.x, cameraDir.y, cameraDir.z, 1.f }
+		{ std::abs(cameraDir.x), std::abs(cameraDir.y), std::abs(cameraDir.z), 1.f }
 	};
 
 #else
@@ -278,6 +277,8 @@ void Application::RecreateWindowResources()
 
 	m_DepthBuffer.Initialize(m_VulkanInstance, m_CommandPool, m_Swapchain);
 	CreateFramebuffers();
+
+	m_Window.SetFramebufferResized(false);
 }
 
 void Application::CreateFramebuffers()

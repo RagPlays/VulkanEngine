@@ -73,7 +73,7 @@ private:
 	VkInstance m_VulkanInstance;
 	VkDebugUtilsMessengerEXT m_DebugMessenger;
 
-#ifdef NDEBUG
+#if defined NDEBUG
 	static const bool m_ValidationLayersEnabled{ false };
 #else
 	static const bool m_ValidationLayersEnabled{ true };
@@ -93,6 +93,7 @@ private:
 	VkDevice m_VkDevice;
 	VkQueue m_GraphicsVkQueue;
 	VkQueue m_PresentVkQueue;
+
 };
 
 #endif // !VULKANINSTANCE_H

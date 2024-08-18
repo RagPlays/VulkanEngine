@@ -10,8 +10,8 @@
 #include <GLFW/glfw3native.h>
 
 // 720p resolution (AR 16:9)
-constexpr uint32_t g_WindowWidth{ 1920 };
-constexpr uint32_t g_WindowHeight{ 1080 };
+constexpr uint32_t g_WindowStartWidth{ 1920 };
+constexpr uint32_t g_WindowStartHeight{ 1080 };
 
 class Window final
 {
@@ -38,6 +38,7 @@ public:
 	void WaitEvents() const;
 
 	float GetAspectRatio() const;
+	float GetStartAspectRatio() const;
 
 	bool GetFramebufferResized() const;
 	void SetFramebufferResized(bool resized);

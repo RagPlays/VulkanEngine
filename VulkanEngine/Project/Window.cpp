@@ -28,7 +28,7 @@ void Window::Initialize()
 	}
 
 	// Window Creating
-	m_pWindow = glfwCreateWindow(g_WindowWidth, g_WindowHeight, "VULKAN_ENGINE", nullptr, nullptr);
+	m_pWindow = glfwCreateWindow(g_WindowStartWidth, g_WindowStartHeight, "VULKAN_ENGINE", nullptr, nullptr);
 
 	// CallBack
 	glfwSetWindowUserPointer(m_pWindow, this);
@@ -72,7 +72,16 @@ void Window::WaitEvents() const
 
 float Window::GetAspectRatio() const
 {
-	return static_cast<float>(g_WindowWidth) / static_cast<float>(g_WindowHeight);
+	if (!m_pWindow) return 0.f;
+	int width{};
+	int height{};
+	GetFramebufferSize(width, height);
+	return static_cast<float>(width) / static_cast<float>(height);
+}
+
+float Window::GetStartAspectRatio() const
+{
+	return static_cast<float>(g_WindowStartWidth) / static_cast<float>(g_WindowStartHeight);
 }
 
 bool Window::GetFramebufferResized() const

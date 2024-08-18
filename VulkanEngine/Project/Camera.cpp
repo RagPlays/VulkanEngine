@@ -31,13 +31,12 @@ void Camera::Initialize(const VulkanInstance& instance, const Window& window)
 {
     const VkDevice& device{ instance.GetVkDevice() };
     const VkPhysicalDevice& phyDevice{ instance.GetVkPhysicalDevice() };
-    const float aspectRatio{ window.GetAspectRatio() };
 
     m_FOV = 45.f;
     m_Near = 0.1f;
     m_Far = 100.f;
     m_Window = window.GetWindow();
-    m_AspectRatio = aspectRatio;
+    m_AspectRatio = window.GetAspectRatio();
 
     UpdateCameraVectors();
 
