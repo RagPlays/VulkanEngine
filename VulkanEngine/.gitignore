@@ -76,7 +76,6 @@ StyleCopReport.xml
 *.ilk
 *.meta
 *.obj
-!Resources/Models/*.obj
 *.iobj
 *.pch
 *.pdb
@@ -362,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# But do not ignore the Resources directory
+!Project/Resources/
+# Do not ignore the contents of Resources
+!Project/Resources/**
