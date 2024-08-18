@@ -500,7 +500,8 @@ void Application::Create3DScene()
 	model2.Initialize(m_VulkanInstance, m_CommandPool, g_Model3DPath1);
 
 	model1.SetPosition(glm::vec3{0.f, -2.f, 0.f});
-	model1.SetScale(100.f);
+	model1.SetScale(50.f);
+
 	model2.SetPosition(glm::vec3{ 0.f, 0.f, 0.f });
 
 	// adding models

@@ -10,10 +10,10 @@
 
 int main()
 {
-	Application vulkanApplication{};
     try
     {
-        vulkanApplication.Run();
+        Application vulkanApp{};
+        vulkanApp.Run();
     }
     catch (const std::exception& execption)
     {

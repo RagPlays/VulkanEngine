@@ -1,7 +1,6 @@
 # Source files
 set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Shaders")
 set(SHADER_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/Shaders")
-
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "${SHADER_SOURCE_DIR}/*.frag"
     "${SHADER_SOURCE_DIR}/*.vert"
@@ -23,65 +22,62 @@ add_custom_target(
     DEPENDS ${SPIRV_BINARY_FILES}
 )
 
-set(STB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libs/stb")
-set(OBJLOADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libs/tinyobjloader")
-
 set(SOURCES 
-    "main.cpp"
-    "Application.h"
-    "Application.cpp"
-    "VulkanUtils.h"
-    "VulkanStructs.h"
-    "RenderPass.h"
-    "RenderPass.cpp"
-    "CommandPool.h"
-    "CommandPool.cpp"
-    "CommandBuffer.h" 
-    "CommandBuffer.cpp"
-    "DataBuffer.h"
-    "DataBuffer.cpp"
-    "Image.h"
-    "Image.cpp"
-    "ImageView.h"
-    "ImageView.cpp"
-    "Sampler.h"
-    "Sampler.cpp"
-    "Model.h"
-    "Model.cpp"
-    "Scene.h"
-    "Scene.cpp"
-    "Shader.h"
-    "Shader.cpp"
-    "Camera.h"
-    "Camera.cpp"
-    "Timer.h"
-    "Timer.cpp"
-    "Singleton.h"
-    "SyncObjects.h"
-    "SyncObjects.cpp"
-    "VulkanInstance.h"
-    "VulkanInstance.cpp"
-    "Surface.h"
-    "Surface.cpp"
-    "Texture.h"
-    "Texture.cpp"
-    "Window.h"
-    "Window.cpp"
-    "GraphicsPipeline3D.h"
-    "GraphicsPipeline3D.cpp"
-    "GraphicsPipeline2D.h"
-    "GraphicsPipeline2D.cpp"
-    "Vertex.h"
-    "DepthBuffer.cpp"
-    "DepthBuffer.h"
-    "Swapchain.cpp"
-    "Swapchain.h"
-    "GraphicsPipeline3DIR.h"
-    "GraphicsPipeline3DIR.cpp"
+   "main.cpp"
+   "Application.h"
+   "Application.cpp"
+   "VulkanUtils.h"
+   "VulkanStructs.h"
+   "RenderPass.h"
+   "RenderPass.cpp"
+   "CommandPool.h"
+   "CommandPool.cpp"
+   "CommandBuffer.h" 
+   "CommandBuffer.cpp"
+   "DataBuffer.h"
+   "DataBuffer.cpp"
+   "Image.h"
+   "Image.cpp"
+   "ImageView.h"
+   "ImageView.cpp"
+   "Sampler.h"
+   "Sampler.cpp"
+   "Model.h"
+   "Model.cpp"
+   "Scene.h"
+   "Scene.cpp"
+   "Shader.h"
+   "Shader.cpp"
+   "Camera.h"
+   "Camera.cpp"
+   "Timer.h"
+   "Timer.cpp"
+   "Singleton.h"
+   "SyncObjects.h"
+   "SyncObjects.cpp"
+   "VulkanInstance.h"
+   "VulkanInstance.cpp"
+   "Surface.h"
+   "Surface.cpp"
+   "Texture.h"
+   "Texture.cpp"
+   "Window.h"
+   "Window.cpp"
+   "GraphicsPipeline3D.h"
+   "GraphicsPipeline3D.cpp"
+   "GraphicsPipeline2D.h"
+   "GraphicsPipeline2D.cpp"
+   "Vertex.h"
+   "DepthBuffer.cpp"
+   "DepthBuffer.h"
+   "Swapchain.cpp"
+   "Swapchain.h"
+   "GraphicsPipeline3DIR.h"
+   "GraphicsPipeline3DIR.cpp"
 )
 
 # Create the executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${GLSL_SOURCE_FILES} )
+add_executable(${PROJECT_NAME} ${SOURCES} ${GLSL_SOURCE_FILES})
 add_dependencies(${PROJECT_NAME} Shaders)
 
 # Link libraries
@@ -90,19 +86,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${Vulkan_LIBRARIES} glfw)
 target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
 # Include STB image
-target_include_directories(${PROJECT_NAME} PRIVATE "${STB_DIR}/include")
-# Include tinyObjLoader
-target_include_directories(${PROJECT_NAME} PRIVATE "${OBJLOADER_DIR}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})
 
-# Copy resources
-set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/Project/Resources")
-file(COPY ${RESOURCES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-add_custom_target(CopyResources ALL
-    COMMENT "Copying resources directory to build directory"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${RESOURCES_DIR} ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${RESOURCES_DIR}
-)
+# Include tinyObjLoader
+target_link_libraries(${PROJECT_NAME} PRIVATE tinyobjloader)
 
 # Visual Leak Detector
 if(WIN32 AND CMAKE_BUILD_TYPE MATCHES Debug)
@@ -132,3 +119,13 @@ if(WIN32 AND CMAKE_BUILD_TYPE MATCHES Debug)
     endforeach(DLL)
 
 endif()
+
+# Copy resources
+set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/Project/Resources")
+file(COPY ${RESOURCES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_target(CopyResources ALL
+    COMMENT "Copying resources directory to build directory"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${RESOURCES_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${RESOURCES_DIR}
+)

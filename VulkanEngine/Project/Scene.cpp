@@ -99,7 +99,7 @@ void Scene3DIR::Initialize(const VulkanInstance& instance, const CommandPool& co
 				const uint32_t idx{ static_cast<uint32_t>(modelInstanceIdx) };
 				model.SetPosition(idx, positions[modelInstanceIdx]);
 				model.SetRotation(idx, Transform3D::GetRandomRotationVec());
-				model.SetScale(idx, 1.f);
+				model.SetScale(idx, Transform3D::GetRandomScale(0.9f, 1.1f));
 			}
 
 			m_Models.emplace_back(std::move(model));
